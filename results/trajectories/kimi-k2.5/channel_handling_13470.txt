@@ -1,0 +1,1277 @@
+=== STDOUT ===
+👋 This is mini-swe-agent version 2.2.8.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/Users/user/Library/Application Support/mini-swe-agent/.env'
+Building agent config from specs: 
+['/Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/config/mini.yaml']
+
+System:
+You are a helpful assistant that can interact with a computer.
+
+User:
+Please solve this issue: Fix the bug in the file /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyq3fe8z0/topomap.py.
+
+Context: This bug is in MNE-Python's channel handling pipeline. Channels represent individual EEG/MEG/fNIRS sensors on the 
+scalp or brain. Correct channel types, positions, and selection (picks) are critical — mixing up sensor types or locations 
+invalidates spatial analyses.
+
+The file is from the MNE-Python neuroscience library (PR #13470: FIX: Fix _plot_topomap channel names plotting when using a 
+mask).
+Read the file, identify the bug, and fix it in place. Only modify 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyq3fe8z0/topomap.py. Do not install packages or run tests.
+
+You can execute bash commands and edit files to implement the necessary changes.
+
+## Recommended Workflow
+
+This workflow should be done step-by-step so that you can iterate on your changes and any possible problems.
+
+1. Analyze the codebase by finding and reading relevant files
+2. Create a script to reproduce the issue
+3. Edit the source code to resolve the issue
+4. Verify your fix works by running your script again
+5. Test edge cases to ensure your fix is robust
+6. Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+   Do not combine it with any other command. <important>After this command, you cannot continue working on this 
+task.</important>
+
+## Command Execution Rules
+
+You are operating in an environment where
+
+1. You issue at least one command
+2. The system executes the command(s) in a subshell
+3. You see the result(s)
+4. You write your next command(s)
+
+Each response should include:
+
+1. **Reasoning text** where you explain your analysis and plan
+2. At least one tool call with your command
+
+**CRITICAL REQUIREMENTS:**
+
+- Your response SHOULD include reasoning text explaining what you're doing
+- Your response MUST include AT LEAST ONE bash tool call
+- Directory or environment variable changes are not persistent. Every action is executed in a new subshell.
+- However, you can prefix any action with `MY_ENV_VAR=MY_VALUE cd /path/to/working/dir && ...` or write/load environment 
+variables from files
+- Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+  Do not combine it with any other command. <important>After this command, you cannot continue working on this 
+task.</important>
+
+Example of a CORRECT response:
+<example_response>
+I need to understand the structure of the repository first. Let me check what files are in the current directory to get a 
+better understanding of the codebase.
+
+[Makes bash tool call with {"command": "ls -la"} as arguments]
+</example_response>
+
+<system_information>
+Darwin 25.4.0 Darwin Kernel Version 25.4.0: Thu Mar 19 19:30:44 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6000 x86_64
+</system_information>
+
+## Useful command examples
+
+### Create a new file:
+
+```bash
+cat <<'EOF' > newfile.py
+import numpy as np
+hello = "world"
+print(hello)
+EOF
+```
+
+### Edit files with sed:<important>
+You are on MacOS. For all the below examples, you need to use `sed -i ''` instead of `sed -i`.
+</important>```bash
+# Replace all occurrences
+sed -i 's/old_string/new_string/g' filename.py
+
+# Replace only first occurrence
+sed -i 's/old_string/new_string/' filename.py
+
+# Replace first occurrence on line 1
+sed -i '1s/old_string/new_string/' filename.py
+
+# Replace all occurrences in lines 1-10
+sed -i '1,10s/old_string/new_string/g' filename.py
+```
+
+### View file content:
+
+```bash
+# View specific lines with numbers
+nl -ba filename.py | sed -n '10,20p'
+```
+
+### Any other command you want to run
+
+```bash
+anything
+```
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 1, $0.00):
+```
+cat /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyq3fe8z0/topomap.py
+```
+
+Tool:
+<returncode>
+0
+<output_head>
+"""Functions to plot M/EEG data e.g. topographies."""
+
+# Authors: The MNE-Python contributors.
+# License: BSD-3-Clause
+# Copyright the MNE-Python contributors.
+
+import copy
+import itertools
+import warnings
+from functools import partial
+from numbers import Integral
+
+import numpy as np
+from scipy.interpolate import (
+    CloughTocher2DInterpolator,
+    LinearNDInterpolator,
+    NearestNDInterpolator,
+)
+from scipy.sparse import csr_array
+from scipy.spatial import Delaunay, Voronoi
+from scipy.spatial.distance import pdist, squareform
+
+from .._fiff.constants import FIFF
+from .._fiff.meas_info import Info, _simplify_info
+from .._fiff.pick import (
+    _MEG_CH_TYPES_SPLIT,
+    _pick_data_channels,
+    _picks_by_type,
+    _picks_to_idx,
+    pick_channels,
+    pick_info,
+    pick_types,
+)
+from ..baseline import rescale
+from ..defaults import (
+    _BORDER_DEFAULT,
+    _EXTRAPOLATE_DEFAULT,
+    _INTERPOLATION_DEFAULT,
+    _handle_default,
+)
+from ..transforms import apply_trans, invert_transform
+from ..utils import (
+    _check_option,
+    _check_sphere,
+    _clean_names,
+    _is_numeric,
+    _time_mask,
+    _validate_type,
+    check_version,
+    fill_doc,
+    legacy,
+    logger,
+    verbose,
+    warn,
+)
+from ..utils.spectrum import _split_psd_kwargs
+from .ui_events import TimeChange, publish, subscribe
+from .utils import (
+    DraggableColorbar,
+    _check_delayed_ssp,
+    _check_time_unit,
+    _check_type_projs,
+    _draw_proj_checkbox,
+    _format_units_psd,
+    _get_cmap,
+    _get_plot_ch_type,
+    _prepare_sensor_names,
+    _prepare_trellis,
+    _process_times,
+    _set_3d_axes_equal,
+    _setup_cmap,
+    _setup_vmin_vmax,
+    _validate_if_list_of_axes,
+    figure_nobar,
+    plot_sensors,
+    plt_show,
+)
+
+_fnirs_types = ("hbo", "hbr", "fnirs_cw_amplitude", "fnirs_od")
+_opm_coils = (FIFF.FIFFV_COIL_QUSPIN_ZFOPM_MAG, FIFF.FIFFV_COIL_QUSPIN_ZFOPM_MAG2)
+
+
+# 3.8+ uses a single Collection artist rather than .collections
+# https://github.com/matplotlib/matplotlib/pull/25247
+def _cont_collections(cont):
+    return (cont,) if check_version("matplotlib", "3.8") else tuple(cont.collections)
+
+
+def _adjust_meg_sphere(sphere, info, ch_type):
+    sphere = _check_sphere(sphere, info)
+    assert ch_type is not None
+    if ch_type in ("mag", "grad", "planar1", "planar2"):
+        # move sphere X/Y (head coords) to device X/Y space
+        if info["dev_head_t"] is not None:
+            head_dev_t = invert_transform(info["dev_head_t"])
+            sphere[:3] = apply_trans(head_dev_t, sphere[:3])
+            # Set the sphere Z=0 because all this really affects is flattening.
+            # We could make the head size change as a function of depth in
+            # the helmet like:
+            #
+            #     sphere[2] /= -5
+            #
+            # but let's just assume some orthographic rather than parallel
+            # projection for explicitness / simplicity.
+            sphere[2] = 0.0
+        clip_origin = (0.0, 0.0)
+    else:
+        clip_origin = sphere[:2].copy()
+    return sphere, clip_origin
+
+
+def _prepare_topomap_plot(inst, ch_type, sphere=None):
+    """Prepare topo plot."""
+    from ..channels.layout import _find_topomap_coords, _pair_grad_sensors, find_layout
+
+    info = copy.deepcopy(inst if isinstance(inst, Info) else inst.info)
+    sphere, clip_origin = _adjust_meg_sphere(sphere, info, ch_type)
+
+    clean_ch_names = _clean_names(info["ch_names"])
+    for ii, this_ch in enumerate(info["chs"]):
+        this_ch["ch_name"] = clean_ch_names[ii]
+    for comp in info["comps"]:
+        comp["data"]["col_names"] = _clean_names(comp["data"]["col_names"])
+    info._update_redundant()
+    info["bads"] = _clean_names(info["bads"])
+    info._check_consistency()
+
+    if any(ch["coil_type"] in _opm_coils for ch in info["chs"]):
+        modality = "opm"
+    elif ch_type in _fnirs_types:
+        modality = "fnirs"
+    else:
+        modality = "other"
+
+    # special case for merging grad channels
+    layout = find_layout(info)
+    if (
+        ch_type == "grad"
+        and layout is not None
+        and (
+            layout.kind.startswith("Vectorview")
+            or layout.kind.startswith("Neuromag_122")
+        )
+    ):
+        picks, _ = _pair_grad_sensors(info, layout)
+        pos = _find_topomap_coords(info, picks[::2], sphere=sphere)
+        merge_channels = True
+    elif modality != "other":
+        picks, pos, merge_channels, overlapping_channels = _find_overlaps(
+            info, ch_type, sphere, modality=modality
+        )
+    else:
+        merge_channels = False
+        if ch_type == "eeg":
+            picks = pick_types(info, meg=False, eeg=True, ref_meg=False, exclude="bads")
+        elif ch_type == "csd":
+            picks = pick_types(info, meg=False, csd=True, ref_meg=False, exclude="bads")
+        elif ch_type == "dbs":
+            picks = pick_types(info, meg=False, dbs=True, ref_meg=False, exclude="bads")
+        elif ch_type == "seeg":
+            picks = pick_types(
+                info, meg=False, seeg=True
+<output_tail>
+.set_sizes(node_size)
+
+            # highlight new node
+            size = max(node_size[node_ind] * 2, 100)
+            dots = axes.scatter(
+                *positions[node_ind, :].T, color="tab:green", s=size, zorder=15
+            )
+            highlighted[node_ind] = dots
+            axes.figure.canvas.draw()
+
+
+def _set_adjacency(adjacency, both_nodes, value):
+    """Set adjacency for given node pair, caching errors for sparse arrays."""
+    import warnings
+
+    with warnings.catch_warnings(record=True):
+        adjacency[both_nodes, both_nodes[::-1]] = value
+
+
+@fill_doc
+def plot_regression_weights(
+    model,
+    *,
+    ch_type=None,
+    sensors=True,
+    show_names=False,
+    mask=None,
+    mask_params=None,
+    contours=6,
+    outlines="head",
+    sphere=None,
+    image_interp=_INTERPOLATION_DEFAULT,
+    extrapolate=_EXTRAPOLATE_DEFAULT,
+    border=_BORDER_DEFAULT,
+    res=64,
+    size=1,
+    cmap=None,
+    vlim=(None, None),
+    cnorm=None,
+    axes=None,
+    colorbar=True,
+    cbar_fmt="%1.1e",
+    title=None,
+    show=True,
+):
+    """Plot the regression weights of a fitted EOGRegression model.
+
+    Parameters
+    ----------
+    model : EOGRegression
+        The fitted EOGRegression model whose weights will be plotted.
+    %(ch_type_topomap)s
+    %(sensors_topomap)s
+    %(show_names_topomap)s
+    %(mask_topomap)s
+    %(mask_params_topomap)s
+    %(contours_topomap)s
+    %(outlines_topomap)s
+    %(sphere_topomap_auto)s
+    %(image_interp_topomap)s
+    %(extrapolate_topomap)s
+
+        .. versionchanged:: 0.21
+
+           - The default was changed to ``'local'`` for MEG sensors.
+           - ``'local'`` was changed to use a convex hull mask
+           - ``'head'`` was changed to extrapolate out to the clipping circle.
+    %(border_topomap)s
+
+        .. versionadded:: 0.20
+    %(res_topomap)s
+    %(size_topomap)s
+    %(cmap_topomap)s
+    %(vlim_plot_topomap)s
+    %(cnorm)s
+    %(axes_evoked_plot_topomap)s
+    %(colorbar_topomap)s
+    %(cbar_fmt_topomap)s
+    %(title_none)s
+    %(show)s
+
+    Returns
+    -------
+    fig : instance of matplotlib.figure.Figure
+        Figure with a topomap subplot for each channel type.
+
+    Notes
+    -----
+    .. versionadded:: 1.2
+    """
+    import matplotlib
+    import matplotlib.pyplot as plt
+
+    from ..channels.layout import _merge_ch_data
+
+    sphere = _check_sphere(sphere)
+    if ch_type is None:
+        ch_types = model.info_.get_channel_types(unique=True, only_data_chs=True)
+    else:
+        ch_types = [ch_type]
+    del ch_type
+
+    nrows = model.coef_.shape[1]
+    ncols = len(ch_types)
+
+    axes_was_none = axes is None
+    if axes_was_none:
+        fig, axes = plt.subplots(
+            nrows,
+            ncols,
+            squeeze=False,
+            figsize=(ncols * 2, nrows * 1.5 + 1),
+            layout="constrained",
+        )
+        axes = axes.T.ravel()
+    else:
+        if isinstance(axes, matplotlib.axes.Axes):
+            axes = [axes]
+        fig = axes[0].get_figure()
+    if len(axes) != nrows * ncols:
+        raise ValueError(
+            f"axes must be a list of {nrows * ncols} axes, got "
+            f"length {len(axes)} ({axes})."
+        )
+    axes = iter(axes)
+
+    data_picks = _picks_to_idx(model.info_, model.picks, exclude=model.exclude)
+    data_info = pick_info(model.info_, data_picks)
+    artifact_ch_names = [
+        model.info_["chs"][idx]["ch_name"]
+        for idx in _picks_to_idx(model.info_, model.picks_artifact)
+    ]
+
+    for ch_type in ch_types:
+        (
+            data_picks,
+            pos,
+            merge_channels,
+            names,
+            ch_type,
+            sphere,
+            clip_origin,
+        ) = _prepare_topomap_plot(data_info, ch_type=ch_type, sphere=sphere)
+        outlines = _make_head_outlines(
+            sphere, pos, outlines=outlines, clip_origin=clip_origin
+        )
+        coef = model.coef_[data_picks]
+        for data, ch_name in zip(coef.T, artifact_ch_names):
+            if merge_channels:
+                data, names = _merge_ch_data(data, ch_type, names)
+            ax = next(axes)
+            names = _prepare_sensor_names(data_info.ch_names, show_names)
+
+            _plot_topomap_multi_cbar(
+                data,
+                pos,
+                ax,
+                title=f"{ch_type}/{ch_name}",
+                vlim=vlim,
+                cmap=cmap,
+                outlines=outlines,
+                colorbar=colorbar,
+                unit="",
+                cbar_fmt=cbar_fmt,
+                sphere=sphere,
+                ch_type=ch_type,
+                sensors=sensors,
+                names=names,
+                mask=mask,
+                mask_params=mask_params,
+                contours=contours,
+                image_interp=image_interp,
+                extrapolate=extrapolate,
+                border=border,
+                res=res,
+                size=size,
+                cnorm=cnorm,
+            )
+    if axes_was_none:
+        fig.suptitle(title)
+    plt_show(show)
+    return fig
+
+<elided_chars>
+124555
+<warning>
+Output too long.
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 2, $0.00):
+```
+grep -n "_plot_topomap" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyq3fe8z0/topomap.py | head -50
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+464:    %(vlim_plot_topomap_proj)s
+1051:    %(vlim_plot_topomap)s
+1057:    %(axes_plot_topomap)s
+1088:    return _plot_topomap(
+1233:def _plot_topomap(
+1616:    %(vlim_plot_topomap)s
+1926:    %(vlim_plot_topomap)s
+1935:    %(axes_plot_topomap)s
+2149:    %(vlim_plot_topomap_psd)s
+2158:    %(axes_evoked_plot_topomap)s
+2425:        tp, cn, interp = _plot_topomap(
+2598:def _plot_topomap_multi_cbar(
+2731:    %(dB_plot_topomap)s
+2753:    %(vlim_plot_topomap_psd)s
+2762:    %(axes_spectrum_plot_topomap)s
+2831:    %(dB_plot_topomap)s
+2853:    %(vlim_plot_topomap_psd)s
+2864:    %(axes_spectrum_plot_topomap)s
+2948:        _plot_topomap_multi_cbar(
+3622:    %(vlim_plot_topomap)s
+3631:    %(axes_plot_topomap)s
+4102:    %(vlim_plot_topomap)s
+4104:    %(axes_evoked_plot_topomap)s
+4182:            _plot_topomap_multi_cbar(
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 3, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyq3fe8z0/topomap.py | sed -n '1233,1400p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  1233  def _plot_topomap(
+  1234      data,
+  1235      pos,
+  1236      axes,
+  1237      *,
+  1238      ch_type="eeg",
+  1239      sensors=True,
+  1240      names=None,
+  1241      mask=None,
+  1242      mask_params=None,
+  1243      contours=6,
+  1244      outlines="head",
+  1245      sphere=None,
+  1246      image_interp=_INTERPOLATION_DEFAULT,
+  1247      extrapolate=_EXTRAPOLATE_DEFAULT,
+  1248      border=_BORDER_DEFAULT,
+  1249      res=64,
+  1250      cmap=None,
+  1251      vmin=None,
+  1252      vmax=None,
+  1253      cnorm=None,
+  1254      show=True,
+  1255      onselect=None,
+  1256  ):
+  1257      from matplotlib.colors import Normalize
+  1258      from matplotlib.widgets import RectangleSelector
+  1259  
+  1260      from ..channels.layout import (
+  1261          _find_topomap_coords,
+  1262          _merge_ch_data,
+  1263          _pair_grad_sensors,
+  1264      )
+  1265  
+  1266      data = np.asarray(data)
+  1267      logger.debug(f"Plotting topomap for {ch_type} data shape {data.shape}")
+  1268  
+  1269      if isinstance(pos, Info):  # infer pos from Info object
+  1270          picks = _pick_data_channels(pos, exclude=())  # pick only data channels
+  1271          pos = pick_info(pos, picks)
+  1272  
+  1273          # check if there is only 1 channel type, and n_chans matches the data
+  1274          ch_type = pos.get_channel_types(picks=None, unique=True)
+  1275          info_help = (
+  1276              "Pick the Info object "
+  1277              "(e.g., using mne.pick_info and mne.channel_indices_by_type)."
+  1278          )
+  1279          if len(ch_type) > 1:
+  1280              raise ValueError(f"Multiple channel types in Info object. {info_help}")
+  1281          elif len(pos["chs"]) != data.shape[0]:
+  1282              raise ValueError(
+  1283                  f"Number of channels in the Info object ({len(pos['chs'])}) and the "
+  1284                  f"data array ({data.shape[0]}) do not match. {info_help}"
+  1285              )
+  1286          else:
+  1287              ch_type = ch_type.pop()
+  1288  
+  1289          if any(type_ in ch_type for type_ in ("planar", "grad")):
+  1290              # deal with grad pairs
+  1291              picks = _pair_grad_sensors(pos, topomap_coords=False)
+  1292              pos = _find_topomap_coords(pos, picks=picks[::2], sphere=sphere)
+  1293              data, _ = _merge_ch_data(data[picks], ch_type, [])
+  1294              data = data.reshape(-1)
+  1295          else:
+  1296              picks = list(range(data.shape[0]))
+  1297              pos = _find_topomap_coords(pos, picks=picks, sphere=sphere)
+  1298  
+  1299      extrapolate = _check_extrapolate(extrapolate, ch_type)
+  1300      if data.ndim > 1:
+  1301          raise ValueError(
+  1302              f"Data needs to be array of shape (n_sensors,); got shape {data.shape}."
+  1303          )
+  1304  
+  1305      # Give a helpful error message for common mistakes regarding the position
+  1306      # matrix.
+  1307      pos_help = (
+  1308          "Electrode positions should be specified as a 2D array with "
+  1309          "shape (n_channels, 2). Each row in this matrix contains the "
+  1310          "(x, y) position of an electrode."
+  1311      )
+  1312      if pos.ndim != 2:
+  1313          error = (
+  1314              f"{pos.ndim}D array supplied as electrode positions, where a 2D array was "
+  1315              "expected"
+  1316          )
+  1317          raise ValueError(error + " " + pos_help)
+  1318      elif pos.shape[1] == 3:
+  1319          error = (
+  1320              "The supplied electrode positions matrix contains 3 columns. "
+  1321              "Are you trying to specify XYZ coordinates? Perhaps the "
+  1322              "mne.channels.create_eeg_layout function is useful for you."
+  1323          )
+  1324          raise ValueError(error + " " + pos_help)
+  1325      # No error is raised in case of pos.shape[1] == 4. In this case, it is
+  1326      # assumed the position matrix contains both (x, y) and (width, height)
+  1327      # values, such as Layout.pos.
+  1328      elif pos.shape[1] == 1 or pos.shape[1] > 4:
+  1329          raise ValueError(pos_help)
+  1330      pos = pos[:, :2]
+  1331  
+  1332      if len(data) != len(pos):
+  1333          raise ValueError(
+  1334              "Data and pos need to be of same length. Got data of "
+  1335              f"length {len(data)}, pos of length {len(pos)}"
+  1336          )
+  1337  
+  1338      norm = min(data) >= 0
+  1339      vmin, vmax = _setup_vmin_vmax(data, vmin, vmax, norm)
+  1340      if cmap is None:
+  1341          cmap = "Reds" if norm else "RdBu_r"
+  1342      cmap = _get_cmap(cmap)
+  1343  
+  1344      outlines = _make_head_outlines(sphere, pos, outlines, (0.0, 0.0))
+  1345      assert isinstance(outlines, dict)
+  1346  
+  1347      _prepare_topomap(pos, axes)
+  1348  
+  1349      mask_params = _handle_default("mask_params", mask_params)
+  1350  
+  1351      # find mask limits and setup interpolation
+  1352      extent, Xi, Yi, interp = _setup_interp(
+  1353          pos, res, image_interp, extrapolate, outlines, border
+  1354      )
+  1355      interp.set_values(data)
+  1356      Zi = interp.set_locations(Xi, Yi)()
+  1357  
+  1358      # plot outline
+  1359      patch_ = _get_patch(outlines, extrapolate, interp, axes)
+  1360  
+  1361      # get colormap normalization
+  1362      if cnorm is None:
+  1363          cnorm = Normalize(vmin=vmin, vmax=vmax)
+  1364  
+  1365      # plot interpolated map
+  1366      if image_interp == "nearest":  # plot over with Voronoi, more accurate
+  1367          im = _voronoi_topomap(
+  1368              data,
+  1369              pos=pos,
+  1370              outlines=outlines,
+  1371              ax=axes,
+  1372              cmap=cmap,
+  1373              norm=cnorm,
+  1374              extent=extent,
+  1375              res=res,
+  1376          )
+  1377      else:
+  1378          im = axes.imshow(
+  1379              Zi,
+  1380              cmap=cmap,
+  1381              origin="lower",
+  1382              aspect="equal",
+  1383              extent=extent,
+  1384              interpolation="bilinear",
+  1385              norm=cnorm,
+  1386          )
+  1387  
+  1388      # gh-1432 had a workaround for no contours here, but we'll remove it
+  1389      # because mpl has probably fixed it
+  1390      linewidth = mask_params["markeredgewidth"]
+  1391      cont = True
+  1392      if isinstance(contours, np.ndarray | list):
+  1393          pass
+  1394      elif contours == 0 or ((Zi == Zi[0, 0]) | np.isnan(Zi)).all():
+  1395          cont = None  # can't make contours for constant-valued functions
+  1396      if cont:
+  1397          with warnings.catch_warnings(record=True):
+  1398              warnings.simplefilter("ignore")
+  1399              cont = axes.contour(
+  1400                  Xi, Yi, Zi, contours, colors="k", linewidths=linewidth / 2.0
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 4, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyq3fe8z0/topomap.py | sed -n '1400,1550p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  1400                  Xi, Yi, Zi, contours, colors="k", linewidths=linewidth / 2.0
+  1401              )
+  1402  
+  1403      if patch_ is not None:
+  1404          im.set_clip_path(patch_)
+  1405          if cont is not None:
+  1406              for col in _cont_collections(cont):
+  1407                  col.set_clip_path(patch_)
+  1408  
+  1409      pos_x, pos_y = pos.T
+  1410      mask = mask.astype(bool, copy=False) if mask is not None else None
+  1411      if sensors is not False and mask is None:
+  1412          _topomap_plot_sensors(pos_x, pos_y, sensors=sensors, ax=axes)
+  1413      elif sensors and mask is not None:
+  1414          idx = np.where(mask)[0]
+  1415          axes.plot(pos_x[idx], pos_y[idx], **mask_params)
+  1416          idx = np.where(~mask)[0]
+  1417          _topomap_plot_sensors(pos_x[idx], pos_y[idx], sensors=sensors, ax=axes)
+  1418      elif not sensors and mask is not None:
+  1419          idx = np.where(mask)[0]
+  1420          axes.plot(pos_x[idx], pos_y[idx], **mask_params)
+  1421  
+  1422      if isinstance(outlines, dict):
+  1423          _draw_outlines(axes, outlines)
+  1424  
+  1425      if names is not None:
+  1426          show_idx = np.arange(len(names)) if mask is None else np.where(mask)[0]
+  1427          for ii, (_pos, _name) in enumerate(zip(pos, names)):
+  1428              if ii not in show_idx:
+  1429                  continue
+  1430              axes.text(
+  1431                  _pos[0],
+  1432                  _pos[1],
+  1433                  _name,
+  1434                  horizontalalignment="center",
+  1435                  verticalalignment="center",
+  1436                  size="x-small",
+  1437              )
+  1438  
+  1439      if onselect is not None:
+  1440          lim = axes.dataLim
+  1441          x0, y0, width, height = lim.x0, lim.y0, lim.width, lim.height
+  1442          axes.RS = RectangleSelector(axes, onselect=onselect)
+  1443          axes.set(xlim=[x0, x0 + width], ylim=[y0, y0 + height])
+  1444      plt_show(show)
+  1445      return im, cont, interp
+  1446  
+  1447  
+  1448  def _plot_ica_topomap(
+  1449      ica,
+  1450      idx=0,
+  1451      ch_type=None,
+  1452      res=64,
+  1453      vmin=None,
+  1454      vmax=None,
+  1455      cmap="RdBu_r",
+  1456      colorbar=False,
+  1457      title=None,
+  1458      show=True,
+  1459      outlines="head",
+  1460      contours=6,
+  1461      image_interp=_INTERPOLATION_DEFAULT,
+  1462      axes=None,
+  1463      sensors=True,
+  1464      allow_ref_meg=False,
+  1465      extrapolate=_EXTRAPOLATE_DEFAULT,
+  1466      sphere=None,
+  1467      border=_BORDER_DEFAULT,
+  1468  ):
+  1469      """Plot single ica map to axes."""
+  1470      from matplotlib.axes import Axes
+  1471  
+  1472      from ..channels.layout import _merge_ch_data
+  1473  
+  1474      if ica.info is None:
+  1475          raise RuntimeError(
+  1476              "The ICA's measurement info is missing. Please "
+  1477              "fit the ICA or add the corresponding info object."
+  1478          )
+  1479      sphere = _check_sphere(sphere, ica.info)
+  1480      if not isinstance(axes, Axes):
+  1481          raise ValueError(
+  1482              f"axis has to be an instance of matplotlib Axes, got {type(axes)} instead."
+  1483          )
+  1484      ch_type = _get_plot_ch_type(ica, ch_type, allow_ref_meg=ica.allow_ref_meg)
+  1485      if ch_type == "ref_meg":
+  1486          logger.info("Cannot produce topographies for MEG reference channels.")
+  1487          return
+  1488  
+  1489      data = ica.get_components()[:, idx]
+  1490      (
+  1491          data_picks,
+  1492          pos,
+  1493          merge_channels,
+  1494          names,
+  1495          _,
+  1496          sphere,
+  1497          clip_origin,
+  1498      ) = _prepare_topomap_plot(ica, ch_type, sphere=sphere)
+  1499      data = data[data_picks]
+  1500      outlines = _make_head_outlines(sphere, pos, outlines, clip_origin)
+  1501  
+  1502      if merge_channels:
+  1503          data, names = _merge_ch_data(data, ch_type, names)
+  1504  
+  1505      topo_title = ica._ica_names[idx]
+  1506      if len(set(ica.get_channel_types())) > 1:
+  1507          topo_title += f" ({ch_type})"
+  1508      axes.set_title(topo_title, fontsize=12)
+  1509      vlim = _setup_vmin_vmax(data, vmin, vmax)
+  1510      im = plot_topomap(
+  1511          data.ravel(),
+  1512          pos,
+  1513          vlim=vlim,
+  1514          res=res,
+  1515          axes=axes,
+  1516          cmap=cmap,
+  1517          outlines=outlines,
+  1518          contours=contours,
+  1519          sensors=sensors,
+  1520          image_interp=image_interp,
+  1521          show=show,
+  1522          extrapolate=extrapolate,
+  1523          sphere=sphere,
+  1524          border=border,
+  1525          ch_type=ch_type,
+  1526      )[0]
+  1527      if colorbar:
+  1528          cbar, cax = _add_colorbar(
+  1529              axes,
+  1530              im,
+  1531              cmap,
+  1532              title="AU",
+  1533              format_="%3.2f",
+  1534              kind="ica_topomap",
+  1535              ch_type=ch_type,
+  1536          )
+  1537          cbar.ax.tick_params(labelsize=12)
+  1538          cbar.set_ticks(vlim)
+  1539      _hide_frame(axes)
+  1540  
+  1541  
+  1542  @verbose
+  1543  def plot_ica_components(
+  1544      ica,
+  1545      picks=None,
+  1546      ch_type=None,
+  1547      *,
+  1548      inst=None,
+  1549      plot_std=True,
+  1550      reject="auto",
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 5, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+grep -n "mask" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyq3fe8z0/topomap.py | head -80
+```
+
+Tool:
+<returncode>
+0
+<output>
+47:    _time_mask,
+224:        overlapping_mask = np.triu(squareform(dist < 1e-10))
+225:        for chan_idx in range(overlapping_mask.shape[0]):
+229:            if overlapping_mask[chan_idx].any() and (
+235:                    chs[i]["ch_name"] for i in np.where(overlapping_mask[chan_idx])[0]
+456:           - ``'local'`` was changed to use a convex hull mask
+719:        mask_scale = max(1.0, np.linalg.norm(pos, axis=1).max() * 1.01 / radius)
+720:        outlines_dict["mask_pos"] = (mask_scale * head_x, mask_scale * head_y)
+721:        clip_radius = radius * mask_scale
+727:        if "mask_pos" not in outlines:
+728:            raise ValueError("You must specify the coordinates of the image mask.")
+741:        if "mask" in key or key in ("clip_radius", "clip_origin"):
+762:    mask_pos = None
+773:        return outer_pts, mask_pos, Delaunay(np.concatenate((pos, outer_pts)))
+837:        mask_pos = hull_pos + unit_radial_dir * distance * 0.5
+842:        # Construct a mask
+843:        mask_pos = np.unique(mask_pos.reshape(-1, 2), axis=0)
+844:        mask_center = np.mean(mask_pos, axis=0)
+845:        mask_pos -= mask_center
+846:        mask_pos = mask_pos[np.argsort(np.arctan2(mask_pos[:, 1], mask_pos[:, 0]))]
+847:        mask_pos += mask_center
+855:            mask = n_times_dist == n
+857:            steps = hull_diff[mask][np.newaxis, ...] * mult
+859:                (hull_extended[mask, 0][np.newaxis, ...] + steps).reshape((-1, 2))
+877:            return new_pos, mask_pos, tri
+879:    return new_pos, mask_pos, tri
+900:        outer_pts, mask_pts, tri = _get_extra_points(pos, extrapolate, origin, radii)
+902:        self.mask_pts = mask_pts
+998:    mask=None,
+999:    mask_params=None,
+1030:    %(mask_topomap)s
+1031:    %(mask_params_topomap)s
+1043:           - ``'local'`` was changed to use a convex hull mask
+1098:        mask=mask,
+1099:        mask_params=mask_params,
+1136:    mask_ = np.c_[outlines["mask_pos"]]
+1140:        np.min(np.r_[xlim[0], mask_[:, 0], clip_origin[0] - clip_radius[0]]),
+1141:        np.max(np.r_[xlim[1], mask_[:, 0], clip_origin[0] + clip_radius[0]]),
+1144:        np.min(np.r_[ylim[0], mask_[:, 1], clip_origin[1] - clip_radius[1]]),
+1145:        np.max(np.r_[ylim[1], mask_[:, 1], clip_origin[1] + clip_radius[1]]),
+1220:                interp.mask_pts, clip_on=True, transform=ax.transData
+1241:    mask=None,
+1242:    mask_params=None,
+1349:    mask_params = _handle_default("mask_params", mask_params)
+1351:    # find mask limits and setup interpolation
+1390:    linewidth = mask_params["markeredgewidth"]
+1410:    mask = mask.astype(bool, copy=False) if mask is not None else None
+1411:    if sensors is not False and mask is None:
+1413:    elif sensors and mask is not None:
+1414:        idx = np.where(mask)[0]
+1415:        axes.plot(pos_x[idx], pos_y[idx], **mask_params)
+1416:        idx = np.where(~mask)[0]
+1418:    elif not sensors and mask is not None:
+1419:        idx = np.where(mask)[0]
+1420:        axes.plot(pos_x[idx], pos_y[idx], **mask_params)
+1426:        show_idx = np.arange(len(names)) if mask is None else np.where(mask)[0]
+1857:    mask=None,
+1858:    mask_params=None,
+1907:    %(mask_evoked_topomap)s
+1908:    %(mask_params_topomap)s
+1918:           - ``'local'`` was changed to use a convex hull mask
+1978:    idx = np.where(_time_mask(tfr.times, tmin, tmax))[0]
+1985:    idx = np.where(_time_mask(tfr.freqs, fmin, fmax))[0]
+2033:        mask=mask,
+2034:        mask_params=mask_params,
+2085:    mask=None,
+2086:    mask_params=None,
+2128:    %(mask_evoked_topomap)s
+2129:    %(mask_params_topomap)s
+2141:           - ``'local'`` was changed to use a convex hull mask
+2226:    # mask_params defaults
+2227:    mask_params = _handle_default("mask_params", mask_params)
+2228:    mask_params["markersize"] *= size / 2.0
+2229:    mask_params["markeredgewidth"] *= size / 2.0
+2311:            _time_mask(evoked.times, tmin=t, tmax=None, sfreq=evoked.info["sfreq"])
+2361:                time_mask = (tmin_ < evoked.times) & (evoked.times < tmax_)
+2362:                data_[:, average_idx] = data[picks][:, time_mask].mean(-1)
+2363:                averaged_times.append(evoked.times[time_mask])
+2381:    # apply mask if requested
+2382:    if mask is not None:
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 6, $0.02):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyq3fe8z0/topomap.py | sed -n '1420,1450p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  1420          axes.plot(pos_x[idx], pos_y[idx], **mask_params)
+  1421  
+  1422      if isinstance(outlines, dict):
+  1423          _draw_outlines(axes, outlines)
+  1424  
+  1425      if names is not None:
+  1426          show_idx = np.arange(len(names)) if mask is None else np.where(mask)[0]
+  1427          for ii, (_pos, _name) in enumerate(zip(pos, names)):
+  1428              if ii not in show_idx:
+  1429                  continue
+  1430              axes.text(
+  1431                  _pos[0],
+  1432                  _pos[1],
+  1433                  _name,
+  1434                  horizontalalignment="center",
+  1435                  verticalalignment="center",
+  1436                  size="x-small",
+  1437              )
+  1438  
+  1439      if onselect is not None:
+  1440          lim = axes.dataLim
+  1441          x0, y0, width, height = lim.x0, lim.y0, lim.width, lim.height
+  1442          axes.RS = RectangleSelector(axes, onselect=onselect)
+  1443          axes.set(xlim=[x0, x0 + width], ylim=[y0, y0 + height])
+  1444      plt_show(show)
+  1445      return im, cont, interp
+  1446  
+  1447  
+  1448  def _plot_ica_topomap(
+  1449      ica,
+  1450      idx=0,
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 7, $0.03):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+ Let me search for related issues or the specific context of this bug:
+
+```
+grep -n "names" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyq3fe8z0/topomap.py | head -60
+```
+
+Tool:
+<returncode>
+0
+<output>
+45:    _clean_names,
+67:    _prepare_sensor_names,
+119:    clean_ch_names = _clean_names(info["ch_names"])
+121:        this_ch["ch_name"] = clean_ch_names[ii]
+123:        comp["data"]["col_names"] = _clean_names(comp["data"]["col_names"])
+125:    info["bads"] = _clean_names(info["bads"])
+172:    ch_names = [info["ch_names"][k] for k in picks]
+175:        ch_names = [k[:-4] for k in ch_names]
+179:            # change names so that vectorview combined grads appear as MEG014x
+181:            ch_names = [ch_names[k][:-1] + "x" for k in range(0, len(ch_names), 2)]
+183:            # Modify the channel names to indicate they are to be merged
+184:            # New names will have the form  S1_D1xS2_D2
+187:                idx = ch_names.index(set_[0][:-4])
+189:                ch_names[idx] = new_name
+194:                    idx = ch_names.index(set_ch)
+196:                    ch_names[idx] = new_name
+199:    return picks, pos, merge_channels, ch_names, ch_type, sphere, clip_origin
+294:        ch_idx = pick_channels(info["ch_names"], [sens])[0]
+393:        names = proj["data"]["col_names"]
+394:        idx = [i for i, name in enumerate(names) if name.endswith(ending)]
+398:            new_col_names = np.delete(np.array(names), idx).tolist()
+400:            proj["data"]["col_names"] = new_col_names
+403:    proj["data"]["ncol"] = len(proj["data"]["col_names"])
+413:    show_names=False,
+442:    %(show_names_topomap)s
+491:        show_names=show_names,
+518:    show_names=False,
+545:    info_names = _clean_names(info["ch_names"], remove_whitespace=True)
+549:        proj["data"]["col_names"] = _clean_names(
+550:            proj["data"]["col_names"],
+553:        picks = pick_channels(info_names, proj["data"]["col_names"], ordered=True)
+560:            use_projs[-1]["data"]["col_names"] = [
+561:                proj["data"]["col_names"][pick] for pick in proj_picks
+567:        # get ch_names, ch_types, data
+569:        picks = pick_channels(info_names, proj["data"]["col_names"], ordered=True)
+578:            names,
+627:        # ch_names
+628:        names = [info["ch_names"][k] for k in _picks_to_idx(info, _ch_type)]
+629:        names = _prepare_sensor_names(names, show_names)
+641:            names=names,
+997:    names=None,
+1029:    %(names_topomap)s
+1097:        names=names,
+1240:    names=None,
+1425:    if names is not None:
+1426:        show_idx = np.arange(len(names)) if mask is None else np.where(mask)[0]
+1427:        for ii, (_pos, _name) in enumerate(zip(pos, names)):
+1494:        names,
+1503:        data, names = _merge_ch_data(data, ch_type, names)
+1505:    topo_title = ica._ica_names[idx]
+1552:    show_names=False,
+1600:    %(show_names_topomap)s
+1705:            names,
+1711:        disp_names = _prepare_sensor_names(names, show_names)
+1733:            comp_title = ica._ica_names[ii]
+1738:                data_, names_ = _merge_ch_data(data_, ch_type, copy.copy(names))
+1748:                names=disp_names,
+1764:            im.axes.set_label(ica._ica_names[ii])
+1856:    show_names=False,
+1906:    %(show_names_topomap)s
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 8, $0.04):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyq3fe8z0/topomap.py | sed -n '160,210p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   160          elif ch_type == "seeg":
+   161              picks = pick_types(
+   162                  info, meg=False, seeg=True, ref_meg=False, exclude="bads"
+   163              )
+   164          else:
+   165              picks = pick_types(info, meg=ch_type, ref_meg=False, exclude="bads")
+   166  
+   167          if len(picks) == 0:
+   168              raise ValueError(f"No channels of type {ch_type!r}")
+   169  
+   170          pos = _find_topomap_coords(info, picks, sphere=sphere)
+   171  
+   172      ch_names = [info["ch_names"][k] for k in picks]
+   173      if modality == "fnirs":
+   174          # Remove the chroma label type for cleaner labeling.
+   175          ch_names = [k[:-4] for k in ch_names]
+   176  
+   177      if merge_channels:
+   178          if ch_type == "grad":
+   179              # change names so that vectorview combined grads appear as MEG014x
+   180              # instead of MEG0142 or MEG0143 which are the 2 planar grads.
+   181              ch_names = [ch_names[k][:-1] + "x" for k in range(0, len(ch_names), 2)]
+   182          elif modality == "fnirs":
+   183              # Modify the channel names to indicate they are to be merged
+   184              # New names will have the form  S1_D1xS2_D2
+   185              # More than two channels can overlap and be merged
+   186              for set_ in overlapping_channels:
+   187                  idx = ch_names.index(set_[0][:-4])
+   188                  new_name = "x".join(s[:-4] for s in set_)
+   189                  ch_names[idx] = new_name
+   190          elif modality == "opm":
+   191              # indicate that non-radial changes are to be removed
+   192              for set_ in overlapping_channels:
+   193                  for set_ch in set_[1:]:
+   194                      idx = ch_names.index(set_ch)
+   195                      new_name = set_ch + "_MERGE-REMOVE"
+   196                      ch_names[idx] = new_name
+   197  
+   198      pos = np.array(pos)[:, :2]  # 2D plot, otherwise interpolation bugs
+   199      return picks, pos, merge_channels, ch_names, ch_type, sphere, clip_origin
+   200  
+   201  
+   202  def _find_overlaps(info, ch_type, sphere, modality="fnirs"):
+   203      """Find overlapping channels."""
+   204      from ..channels.layout import _find_topomap_coords
+   205  
+   206      if modality == "fnirs":
+   207          picks = pick_types(
+   208              info, meg=False, ref_meg=False, fnirs=ch_type, exclude="bads"
+   209          )
+   210      elif modality == "opm":
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 9, $0.04):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyq3fe8z0/topomap.py | sed -n '1408,1440p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  1408  
+  1409      pos_x, pos_y = pos.T
+  1410      mask = mask.astype(bool, copy=False) if mask is not None else None
+  1411      if sensors is not False and mask is None:
+  1412          _topomap_plot_sensors(pos_x, pos_y, sensors=sensors, ax=axes)
+  1413      elif sensors and mask is not None:
+  1414          idx = np.where(mask)[0]
+  1415          axes.plot(pos_x[idx], pos_y[idx], **mask_params)
+  1416          idx = np.where(~mask)[0]
+  1417          _topomap_plot_sensors(pos_x[idx], pos_y[idx], sensors=sensors, ax=axes)
+  1418      elif not sensors and mask is not None:
+  1419          idx = np.where(mask)[0]
+  1420          axes.plot(pos_x[idx], pos_y[idx], **mask_params)
+  1421  
+  1422      if isinstance(outlines, dict):
+  1423          _draw_outlines(axes, outlines)
+  1424  
+  1425      if names is not None:
+  1426          show_idx = np.arange(len(names)) if mask is None else np.where(mask)[0]
+  1427          for ii, (_pos, _name) in enumerate(zip(pos, names)):
+  1428              if ii not in show_idx:
+  1429                  continue
+  1430              axes.text(
+  1431                  _pos[0],
+  1432                  _pos[1],
+  1433                  _name,
+  1434                  horizontalalignment="center",
+  1435                  verticalalignment="center",
+  1436                  size="x-small",
+  1437              )
+  1438  
+  1439      if onselect is not None:
+  1440          lim = axes.dataLim
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 10, $0.05):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+cd /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyq3fe8z0 && git log --oneline -20 2>/dev/null || echo "Not a git repo"
+```
+
+Tool:
+<returncode>
+0
+<output>
+Not a git repo
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+=== STDERR ===

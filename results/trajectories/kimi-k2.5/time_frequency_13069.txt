@@ -1,0 +1,1846 @@
+=== STDOUT ===
+👋 This is mini-swe-agent version 2.2.8.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/Users/user/Library/Application Support/mini-swe-agent/.env'
+Building agent config from specs: ['/Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/config/mini.yaml']
+
+System:
+You are a helpful assistant that can interact with a computer.
+
+User:
+Please solve this issue: Fix the bug in the file /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py.
+
+Context: This bug is in MNE-Python's time-frequency or spectral analysis pipeline. Power spectral density (PSD) and time-frequency representations (TFR) must preserve correct frequency resolution and units. Dimension mismatches or incorrect 
+normalization lead to wrong power estimates across all frequencies.
+
+The file is from the MNE-Python neuroscience library (PR #13069: [FIX] Reading an EDF with preload=False and mixed frequency).
+Read the file, identify the bug, and fix it in place. Only modify /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py. Do not install packages or run tests.
+
+You can execute bash commands and edit files to implement the necessary changes.
+
+## Recommended Workflow
+
+This workflow should be done step-by-step so that you can iterate on your changes and any possible problems.
+
+1. Analyze the codebase by finding and reading relevant files
+2. Create a script to reproduce the issue
+3. Edit the source code to resolve the issue
+4. Verify your fix works by running your script again
+5. Test edge cases to ensure your fix is robust
+6. Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+   Do not combine it with any other command. <important>After this command, you cannot continue working on this task.</important>
+
+## Command Execution Rules
+
+You are operating in an environment where
+
+1. You issue at least one command
+2. The system executes the command(s) in a subshell
+3. You see the result(s)
+4. You write your next command(s)
+
+Each response should include:
+
+1. **Reasoning text** where you explain your analysis and plan
+2. At least one tool call with your command
+
+**CRITICAL REQUIREMENTS:**
+
+- Your response SHOULD include reasoning text explaining what you're doing
+- Your response MUST include AT LEAST ONE bash tool call
+- Directory or environment variable changes are not persistent. Every action is executed in a new subshell.
+- However, you can prefix any action with `MY_ENV_VAR=MY_VALUE cd /path/to/working/dir && ...` or write/load environment variables from files
+- Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+  Do not combine it with any other command. <important>After this command, you cannot continue working on this task.</important>
+
+Example of a CORRECT response:
+<example_response>
+I need to understand the structure of the repository first. Let me check what files are in the current directory to get a better understanding of the codebase.
+
+[Makes bash tool call with {"command": "ls -la"} as arguments]
+</example_response>
+
+<system_information>
+Darwin 25.4.0 Darwin Kernel Version 25.4.0: Thu Mar 19 19:30:44 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6000 x86_64
+</system_information>
+
+## Useful command examples
+
+### Create a new file:
+
+```bash
+cat <<'EOF' > newfile.py
+import numpy as np
+hello = "world"
+print(hello)
+EOF
+```
+
+### Edit files with sed:<important>
+You are on MacOS. For all the below examples, you need to use `sed -i ''` instead of `sed -i`.
+</important>```bash
+# Replace all occurrences
+sed -i 's/old_string/new_string/g' filename.py
+
+# Replace only first occurrence
+sed -i 's/old_string/new_string/' filename.py
+
+# Replace first occurrence on line 1
+sed -i '1s/old_string/new_string/' filename.py
+
+# Replace all occurrences in lines 1-10
+sed -i '1,10s/old_string/new_string/g' filename.py
+```
+
+### View file content:
+
+```bash
+# View specific lines with numbers
+nl -ba filename.py | sed -n '10,20p'
+```
+
+### Any other command you want to run
+
+```bash
+anything
+```
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 1, $0.00):
+```
+cat /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py
+```
+
+Tool:
+<returncode>
+0
+<output_head>
+"""Reading tools from EDF, EDF+, BDF, and GDF."""
+
+# Authors: The MNE-Python contributors.
+# License: BSD-3-Clause
+# Copyright the MNE-Python contributors.
+
+import os
+import re
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
+
+import numpy as np
+from scipy.interpolate import interp1d
+
+from ..._fiff.constants import FIFF
+from ..._fiff.meas_info import _empty_info, _unique_channel_names
+from ..._fiff.utils import _blk_read_lims, _mult_cal_one
+from ...annotations import Annotations
+from ...filter import resample
+from ...utils import _validate_type, fill_doc, logger, verbose, warn
+from ..base import BaseRaw, _get_scaling
+
+# common channel type names mapped to internal ch types
+CH_TYPE_MAPPING = {
+    "EEG": FIFF.FIFFV_EEG_CH,
+    "SEEG": FIFF.FIFFV_SEEG_CH,
+    "ECOG": FIFF.FIFFV_ECOG_CH,
+    "DBS": FIFF.FIFFV_DBS_CH,
+    "EOG": FIFF.FIFFV_EOG_CH,
+    "ECG": FIFF.FIFFV_ECG_CH,
+    "EMG": FIFF.FIFFV_EMG_CH,
+    "BIO": FIFF.FIFFV_BIO_CH,
+    "RESP": FIFF.FIFFV_RESP_CH,
+    "TEMP": FIFF.FIFFV_TEMPERATURE_CH,
+    "MISC": FIFF.FIFFV_MISC_CH,
+    "SAO2": FIFF.FIFFV_BIO_CH,
+    "STIM": FIFF.FIFFV_STIM_CH,
+}
+
+
+@fill_doc
+class RawEDF(BaseRaw):
+    """Raw object from EDF, EDF+ or BDF file.
+
+    Parameters
+    ----------
+    input_fname : path-like
+        Path to the EDF, EDF+ or BDF file.
+    eog : list or tuple
+        Names of channels or list of indices that should be designated EOG
+        channels. Values should correspond to the electrodes in the file.
+        Default is None.
+    misc : list or tuple
+        Names of channels or list of indices that should be designated MISC
+        channels. Values should correspond to the electrodes in the file.
+        Default is None.
+    stim_channel : ``'auto'`` | str | list of str | int | list of int
+        Defaults to ``'auto'``, which means that channels named ``'status'`` or
+        ``'trigger'`` (case insensitive) are set to STIM. If str (or list of
+        str), all channels matching the name(s) are set to STIM. If int (or
+        list of ints), the channels corresponding to the indices are set to
+        STIM.
+    exclude : list of str
+        Channel names to exclude. This can help when reading data with
+        different sampling rates to avoid unnecessary resampling.
+    infer_types : bool
+        If True, try to infer channel types from channel labels. If a channel
+        label starts with a known type (such as 'EEG') followed by a space and
+        a name (such as 'Fp1'), the channel type will be set accordingly, and
+        the channel will be renamed to the original label without the prefix.
+        For unknown prefixes, the type will be 'EEG' and the name will not be
+        modified. If False, do not infer types and assume all channels are of
+        type 'EEG'.
+
+        .. versionadded:: 0.24.1
+    include : list of str | str
+        Channel names to be included. A str is interpreted as a regular
+        expression. 'exclude' must be empty if include is assigned.
+
+        .. versionadded:: 1.1
+    %(preload)s
+    %(units_edf_bdf_io)s
+    %(encoding_edf)s
+    %(exclude_after_unique)s
+    %(verbose)s
+
+    See Also
+    --------
+    mne.io.Raw : Documentation of attributes and methods.
+    mne.io.read_raw_edf : Recommended way to read EDF/EDF+ files.
+    mne.io.read_raw_bdf : Recommended way to read BDF files.
+
+    Notes
+    -----
+    %(edf_resamp_note)s
+
+    Biosemi devices trigger codes are encoded in 16-bit format, whereas system
+    codes (CMS in/out-of range, battery low, etc.) are coded in bits 16-23 of
+    the status channel (see http://www.biosemi.com/faq/trigger_signals.htm).
+    To retrieve correct event values (bits 1-16), one could do:
+
+        >>> events = mne.find_events(...)  # doctest:+SKIP
+        >>> events[:, 2] &= (2**16 - 1)  # doctest:+SKIP
+
+    The above operation can be carried out directly in :func:`mne.find_events`
+    using the ``mask`` and ``mask_type`` parameters (see
+    :func:`mne.find_events` for more details).
+
+    It is also possible to retrieve system codes, but no particular effort has
+    been made to decode these in MNE. In case it is necessary, for instance to
+    check the CMS bit, the following operation can be carried out:
+
+        >>> cms_bit = 20  # doctest:+SKIP
+        >>> cms_high = (events[:, 2] & (1 << cms_bit)) != 0  # doctest:+SKIP
+
+    It is worth noting that in some special cases, it may be necessary to shift
+    event values in order to retrieve correct event triggers. This depends on
+    the triggering device used to perform the synchronization. For instance, in
+    some files events need to be shifted by 8 bits:
+
+        >>> events[:, 2] >>= 8  # doctest:+SKIP
+
+    TAL channels called 'EDF Annotations' or 'BDF Annotations' are parsed and
+    extracted annotations are stored in raw.annotations. Use
+    :func:`mne.events_from_annotations` to obtain events from these
+    annotations.
+
+    If channels named 'status' or 'trigger' are present, they are considered as
+    STIM ch
+<output_tail>
+os.path.splitext(input_fname)[1][1:].lower()
+    if ext != "gdf":
+        raise NotImplementedError(f"Only GDF files are supported, got {ext}.")
+    return RawGDF(
+        input_fname=input_fname,
+        eog=eog,
+        misc=misc,
+        stim_channel=stim_channel,
+        exclude=exclude,
+        preload=preload,
+        include=include,
+        verbose=verbose,
+    )
+
+
+@fill_doc
+def _read_annotations_edf(annotations, ch_names=None, encoding="utf8"):
+    """Annotation File Reader.
+
+    Parameters
+    ----------
+    annotations : ndarray (n_chans, n_samples) | str
+        Channel data in EDF+ TAL format or path to annotation file.
+    ch_names : list of string
+        List of channels' names.
+    %(encoding_edf)s
+
+    Returns
+    -------
+    annot : instance of Annotations
+        The annotations.
+    """
+    pat = "([+-]\\d+\\.?\\d*)(\x15(\\d+\\.?\\d*))?(\x14.*?)\x14\x00"
+    if isinstance(annotations, str | Path):
+        with open(annotations, "rb") as annot_file:
+            triggers = re.findall(pat.encode(), annot_file.read())
+            triggers = [tuple(map(lambda x: x.decode(encoding), t)) for t in triggers]
+    else:
+        tals = bytearray()
+        annotations = np.atleast_2d(annotations)
+        for chan in annotations:
+            this_chan = chan.ravel()
+            if this_chan.dtype == INT32:  # BDF
+                this_chan = this_chan.view(dtype=UINT8)
+                this_chan = this_chan.reshape(-1, 4)
+                # Why only keep the first 3 bytes as BDF values
+                # are stored with 24 bits (not 32)
+                this_chan = this_chan[:, :3].ravel()
+                # As ravel() returns a 1D array we can add all values at once
+                tals.extend(this_chan)
+            else:
+                this_chan = chan.astype(np.int64)
+                # Exploit np vectorized processing
+                tals.extend(np.uint8([this_chan % 256, this_chan // 256]).flatten("F"))
+        try:
+            triggers = re.findall(pat, tals.decode(encoding))
+        except UnicodeDecodeError as e:
+            raise Exception(
+                "Encountered invalid byte in at least one annotations channel."
+                " You might want to try setting \"encoding='latin1'\"."
+            ) from e
+
+    events = {}
+    offset = 0.0
+    for k, ev in enumerate(triggers):
+        onset = float(ev[0]) + offset
+        duration = float(ev[2]) if ev[2] else 0
+        for description in ev[3].split("\x14")[1:]:
+            if description:
+                if (
+                    "@@" in description
+                    and ch_names is not None
+                    and description.split("@@")[1] in ch_names
+                ):
+                    description, ch_name = description.split("@@")
+                    key = f"{onset}_{duration}_{description}"
+                else:
+                    ch_name = None
+                    key = f"{onset}_{duration}_{description}"
+                    if key in events:
+                        key += f"_{k}"  # make key unique
+                if key in events and ch_name:
+                    events[key][3] += (ch_name,)
+                else:
+                    events[key] = [
+                        onset,
+                        duration,
+                        description,
+                        (ch_name,) if ch_name else (),
+                    ]
+
+            elif k == 0:
+                # The startdate/time of a file is specified in the EDF+ header
+                # fields 'startdate of recording' and 'starttime of recording'.
+                # These fields must indicate the absolute second in which the
+                # start of the first data record falls. So, the first TAL in
+                # the first data record always starts with +0.X, indicating
+                # that the first data record starts a fraction, X, of a second
+                # after the startdate/time that is specified in the EDF+
+                # header. If X=0, then the .X may be omitted.
+                offset = -onset
+
+    if events:
+        onset, duration, description, annot_ch_names = zip(*events.values())
+    else:
+        onset, duration, description, annot_ch_names = list(), list(), list(), list()
+
+    assert len(onset) == len(duration) == len(description) == len(annot_ch_names)
+
+    return Annotations(
+        onset=onset,
+        duration=duration,
+        description=description,
+        orig_time=None,
+        ch_names=annot_ch_names,
+    )
+
+
+def _get_annotations_gdf(edf_info, sfreq):
+    onset, duration, desc = list(), list(), list()
+    events = edf_info.get("events", None)
+    # Annotations in GDF: events are stored as the following
+    # list: `events = [n_events, pos, typ, chn, dur]` where pos is the
+    # latency, dur is the duration in samples. They both are
+    # numpy.ndarray
+    if events is not None and events[1].shape[0] > 0:
+        onset = events[1] / sfreq
+        duration = events[4] / sfreq
+        desc = events[2]
+
+    return onset, duration, desc
+
+<elided_chars>
+68276
+<warning>
+Output too long.
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 2, $0.00):
+```
+grep -n "preload" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py | head -50
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+81:    %(preload)s
+142:        preload=False,
+159:            preload,
+190:            preload,
+265:    %(preload)s
+288:        preload=False,
+295:            input_fname, stim_channel, eog, misc, exclude, True, preload, include
+303:            preload,
+467:                    "preload=False will result in edge artifacts. "
+468:                    "It is recommended to use preload=True."
+530:    preload,
+1587:    preload=False,
+1632:    %(preload)s
+1706:        preload=preload,
+1724:    preload=False,
+1769:    %(preload)s
+1792:    preload=True is recommended, as otherwise, edge artifacts appear when
+1840:        preload=preload,
+1857:    preload=False,
+1886:    %(preload)s
+1917:        preload=preload,
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 3, $0.00):
+```
+grep -n "mixed\|sfreq\|_read_segment" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py | head -80
+```
+
+Tool:
+<returncode>
+0
+<output>
+203:            tal_data = self._read_segment_file(
+219:    def _read_segment_file(self, data, idx, fi, start, stop, cals, mult):
+221:        return _read_segment_file(
+313:        onset, duration, desc = _get_annotations_gdf(edf_info, self.info["sfreq"])
+321:    def _read_segment_file(self, data, idx, fi, start, stop, cals, mult):
+323:        return _read_segment_file(
+353:def _read_segment_file(data, idx, fi, start, stop, raw_extras, filenames, cals, mult):
+441:            # expected number of samples, equals maximum sfreq
+451:                # upsample if n_samples is lower than from highest sfreq
+466:                    "Loading an EDF with mixed sampling frequencies and "
+648:    sfreq = (
+654:    info = _empty_info(sfreq)
+711:        info["lowpass"] = info["sfreq"] / 2.0
+720:        info["lowpass"] = info["sfreq"] / 2.0
+1469:                edf_info["event_sfreq"] = event_sr
+1790:    Therefore, if mixed sampling frequency signals are requested, all signals
+2026:def _get_annotations_gdf(edf_info, sfreq):
+2034:        onset = events[1] / sfreq
+2035:        duration = events[4] / sfreq
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 4, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+sed -n '353,550p' /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+def _read_segment_file(data, idx, fi, start, stop, raw_extras, filenames, cals, mult):
+    """Read a chunk of raw data."""
+    n_samps = raw_extras["n_samps"]
+    buf_len = int(raw_extras["max_samp"])
+    dtype = raw_extras["dtype_np"]
+    dtype_byte = raw_extras["dtype_byte"]
+    data_offset = raw_extras["data_offset"]
+    stim_channel_idxs = raw_extras["stim_channel_idxs"]
+    orig_sel = raw_extras["sel"]
+    tal_idx = raw_extras.get("tal_idx", np.empty(0, int))
+    subtype = raw_extras["subtype"]
+    cal = raw_extras["cal"]
+    offsets = raw_extras["offsets"]
+    gains = raw_extras["units"]
+
+    read_sel = np.concatenate([orig_sel[idx], tal_idx])
+    tal_data = []
+
+    # only try to read the stim channel if it's not None and it's
+    # actually one of the requested channels
+    idx_arr = np.arange(idx.start, idx.stop) if isinstance(idx, slice) else idx
+
+    # We could read this one EDF block at a time, which would be this:
+    ch_offsets = np.cumsum(np.concatenate([[0], n_samps]), dtype=np.int64)
+    block_start_idx, r_lims, _ = _blk_read_lims(start, stop, buf_len)
+    # But to speed it up, we really need to read multiple blocks at once,
+    # Otherwise we can end up with e.g. 18,181 chunks for a 20 MB file!
+    # Let's do ~10 MB chunks:
+    n_per = max(10 * 1024 * 1024 // (ch_offsets[-1] * dtype_byte), 1)
+    with open(filenames, "rb", buffering=0) as fid:
+        # Extract data
+        start_offset = data_offset + block_start_idx * ch_offsets[-1] * dtype_byte
+
+        # first read everything into the `ones` array. For channels with
+        # lower sampling frequency, there will be zeros left at the end of the
+        # row. Ignore TAL/annotations channel and only store `orig_sel`
+        ones = np.zeros((len(orig_sel), data.shape[-1]), dtype=data.dtype)
+        # save how many samples have already been read per channel
+        n_smp_read = [0 for _ in range(len(orig_sel))]
+
+        # read data in chunks
+        for ai in range(0, len(r_lims), n_per):
+            block_offset = ai * ch_offsets[-1] * dtype_byte
+            n_read = min(len(r_lims) - ai, n_per)
+            fid.seek(start_offset + block_offset, 0)
+            # Read and reshape to (n_chunks_read, ch0_ch1_ch2_ch3...)
+            many_chunk = _read_ch(
+                fid, subtype, ch_offsets[-1] * n_read, dtype_byte, dtype
+            ).reshape(n_read, -1)
+            r_sidx = r_lims[ai][0]
+            r_eidx = buf_len * (n_read - 1) + r_lims[ai + n_read - 1][1]
+
+            # loop over selected channels, ci=channel selection
+            for ii, ci in enumerate(read_sel):
+                # This now has size (n_chunks_read, n_samp[ci])
+                ch_data = many_chunk[:, ch_offsets[ci] : ch_offsets[ci + 1]].copy()
+
+                # annotation channel has to be treated separately
+                if ci in tal_idx:
+                    tal_data.append(ch_data)
+                    continue
+
+                orig_idx = idx_arr[ii]
+                ch_data = ch_data * cal[orig_idx]
+                ch_data += offsets[orig_idx]
+                ch_data *= gains[orig_idx]
+
+                assert ci == orig_sel[orig_idx]
+
+                if n_samps[ci] != buf_len:
+                    if orig_idx in stim_channel_idxs:
+                        # Stim channel will be interpolated
+                        old = np.linspace(0, 1, n_samps[ci] + 1, True)
+                        new = np.linspace(0, 1, buf_len, False)
+                        ch_data = np.append(ch_data, np.zeros((len(ch_data), 1)), -1)
+                        ch_data = interp1d(old, ch_data, kind="zero", axis=-1)(new)
+                elif orig_idx in stim_channel_idxs:
+                    ch_data = np.bitwise_and(ch_data.astype(int), 2**17 - 1)
+
+                one_i = ch_data.ravel()[r_sidx:r_eidx]
+
+                # note how many samples have been read
+                smp_read = n_smp_read[orig_idx]
+                ones[orig_idx, smp_read : smp_read + len(one_i)] = one_i
+                n_smp_read[orig_idx] += len(one_i)
+
+        # skip if no data was requested, ie. only annotations were read
+        if sum(n_smp_read) > 0:
+            # expected number of samples, equals maximum sfreq
+            smp_exp = data.shape[-1]
+            assert max(n_smp_read) == smp_exp
+
+            # resample data after loading all chunks to prevent edge artifacts
+            resampled = False
+            for i, smp_read in enumerate(n_smp_read):
+                # nothing read, nothing to resample
+                if smp_read == 0:
+                    continue
+                # upsample if n_samples is lower than from highest sfreq
+                if smp_read != smp_exp:
+                    assert (ones[i, smp_read:] == 0).all()  # sanity check
+                    ones[i, :] = resample(
+                        ones[i, :smp_read].astype(np.float64),
+                        smp_exp,
+                        smp_read,
+                        npad=0,
+                        axis=-1,
+                    )
+                    resampled = True
+
+            # give warning if we resampled a subselection
+            if resampled and raw_extras["nsamples"] != (stop - start):
+                warn(
+                    "Loading an EDF with mixed sampling frequencies and "
+                    "preload=False will result in edge artifacts. "
+                    "It is recommended to use preload=True."
+                    "See also https://github.com/mne-tools/mne-python/issues/10635"
+                )
+
+            _mult_cal_one(data[:, :], ones, idx, cals, mult)
+
+    if len(tal_data) > 1:
+        tal_data = np.concatenate([tal.ravel() for tal in tal_data])
+        tal_data = tal_data[np.newaxis, :]
+    return tal_data
+
+
+@fill_doc
+def _read_header(fname, exclude, infer_types, include=None, exclude_after_unique=False):
+    """Unify EDF, BDF and GDF _read_header call.
+
+    Parameters
+    ----------
+    fname : str
+        Path to the EDF+, BDF, or GDF file.
+    exclude : list of str | str
+        Channel names to exclude. This can help when reading data with
+        different sampling rates to avoid unnecessary resampling. A str is
+        interpreted as a regular expression.
+    infer_types : bool
+        If True, try to infer channel types from channel labels. If a channel
+        label starts with a known type (such as 'EEG') followed by a space and
+        a name (such as 'Fp1'), the channel type will be set accordingly, and
+        the channel will be renamed to the original label without the prefix.
+        For unknown prefixes, the type will be 'EEG' and the name will not be
+        modified. If False, do not infer types and assume all channels are of
+        type 'EEG'.
+    include : list of str | str
+        Channel names to be included. A str is interpreted as a regular
+        expression. 'exclude' must be empty if include is assigned.
+    %(exclude_after_unique)s
+
+    Returns
+    -------
+    (edf_info, orig_units) : tuple
+    """
+    ext = os.path.splitext(fname)[1][1:].lower()
+    logger.info(f"{ext.upper()} file detected")
+    if ext in ("bdf", "edf"):
+        return _read_edf_header(
+            fname, exclude, infer_types, include, exclude_after_unique
+        )
+    elif ext == "gdf":
+        return _read_gdf_header(fname, exclude, include), None
+    else:
+        raise NotImplementedError(
+            f"Only GDF, EDF, and BDF files are supported, got {ext}."
+        )
+
+
+def _get_info(
+    fname,
+    stim_channel,
+    eog,
+    misc,
+    exclude,
+    infer_types,
+    preload,
+    include=None,
+    exclude_after_unique=False,
+):
+    """Extract information from EDF+, BDF or GDF file."""
+    eog = eog if eog is not None else []
+    misc = misc if misc is not None else []
+
+    edf_info, orig_units = _read_header(
+        fname, exclude, infer_types, include, exclude_after_unique
+    )
+
+    # XXX: `tal_ch_names` to pass to `_check_stim_channel` should be computed
+    #      from `edf_info['ch_names']` and `edf_info['tal_idx']` but 'tal_idx'
+    #      contains stim channels that are not TAL.
+    stim_channel_idxs, _ = _check_stim_channel(stim_channel, edf_info["ch_names"])
+
+    sel = edf_info["sel"]  # selection of channels not excluded
+    ch_names = edf_info["ch_names"]  # of length len(sel)
+    if "ch_types" in edf_info:
+        ch_types = edf_info["ch_types"]  # of length len(sel)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 5, $0.01):
+```
+sed -n '550,700p' /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+        ch_types = edf_info["ch_types"]  # of length len(sel)
+    else:
+        ch_types = [None] * len(sel)
+    if len(sel) == 0:  # only want stim channels
+        n_samps = edf_info["n_samps"][[0]]
+    else:
+        n_samps = edf_info["n_samps"][sel]
+    nchan = edf_info["nchan"]
+    physical_ranges = edf_info["physical_max"] - edf_info["physical_min"]
+    cals = edf_info["digital_max"] - edf_info["digital_min"]
+    bad_idx = np.where((~np.isfinite(cals)) | (cals == 0))[0]
+    if len(bad_idx) > 0:
+        warn(
+            "Scaling factor is not defined in following channels:\n"
+            + ", ".join(ch_names[i] for i in bad_idx)
+        )
+        cals[bad_idx] = 1
+    bad_idx = np.where(physical_ranges == 0)[0]
+    if len(bad_idx) > 0:
+        warn(
+            "Physical range is not defined in following channels:\n"
+            + ", ".join(ch_names[i] for i in bad_idx)
+        )
+        physical_ranges[bad_idx] = 1
+
+    # Creates a list of dicts of eeg channels for raw.info
+    logger.info("Setting channel info structure...")
+    chs = list()
+    pick_mask = np.ones(len(ch_names))
+
+    chs_without_types = list()
+
+    for idx, ch_name in enumerate(ch_names):
+        chan_info = {}
+        chan_info["cal"] = 1.0
+        chan_info["logno"] = idx + 1
+        chan_info["scanno"] = idx + 1
+        chan_info["range"] = 1.0
+        chan_info["unit_mul"] = FIFF.FIFF_UNITM_NONE
+        chan_info["ch_name"] = ch_name
+        chan_info["unit"] = FIFF.FIFF_UNIT_V
+        chan_info["coord_frame"] = FIFF.FIFFV_COORD_HEAD
+        chan_info["coil_type"] = FIFF.FIFFV_COIL_EEG
+        chan_info["kind"] = FIFF.FIFFV_EEG_CH
+        # montage can't be stored in EDF so channel locs are unknown:
+        chan_info["loc"] = np.full(12, np.nan)
+
+        # if the edf info contained channel type information
+        # set it now
+        ch_type = ch_types[idx]
+        if ch_type is not None and ch_type in CH_TYPE_MAPPING:
+            chan_info["kind"] = CH_TYPE_MAPPING.get(ch_type)
+            if ch_type not in ["EEG", "ECOG", "SEEG", "DBS"]:
+                chan_info["coil_type"] = FIFF.FIFFV_COIL_NONE
+            pick_mask[idx] = False
+        # if user passes in explicit mapping for eog, misc and stim
+        # channels set them here
+        if ch_name in eog or idx in eog or idx - nchan in eog:
+            chan_info["coil_type"] = FIFF.FIFFV_COIL_NONE
+            chan_info["kind"] = FIFF.FIFFV_EOG_CH
+            pick_mask[idx] = False
+        elif ch_name in misc or idx in misc or idx - nchan in misc:
+            chan_info["coil_type"] = FIFF.FIFFV_COIL_NONE
+            chan_info["kind"] = FIFF.FIFFV_MISC_CH
+            pick_mask[idx] = False
+        elif idx in stim_channel_idxs:
+            chan_info["coil_type"] = FIFF.FIFFV_COIL_NONE
+            chan_info["unit"] = FIFF.FIFF_UNIT_NONE
+            chan_info["kind"] = FIFF.FIFFV_STIM_CH
+            pick_mask[idx] = False
+            chan_info["ch_name"] = ch_name
+            ch_names[idx] = chan_info["ch_name"]
+            edf_info["units"][idx] = 1
+        elif ch_type not in CH_TYPE_MAPPING:
+            chs_without_types.append(ch_name)
+        chs.append(chan_info)
+
+    # warn if channel type was not inferable
+    if len(chs_without_types):
+        msg = (
+            "Could not determine channel type of the following channels, "
+            f"they will be set as EEG:\n{', '.join(chs_without_types)}"
+        )
+        logger.info(msg)
+
+    edf_info["stim_channel_idxs"] = stim_channel_idxs
+    if any(pick_mask):
+        picks = [item for item, mask in zip(range(nchan), pick_mask) if mask]
+        edf_info["max_samp"] = max_samp = n_samps[picks].max()
+    else:
+        edf_info["max_samp"] = max_samp = n_samps.max()
+
+    # Info structure
+    # -------------------------------------------------------------------------
+
+    not_stim_ch = [x for x in range(n_samps.shape[0]) if x not in stim_channel_idxs]
+    if len(not_stim_ch) == 0:  # only loading stim channels
+        not_stim_ch = list(range(len(n_samps)))
+    sfreq = (
+        np.take(n_samps, not_stim_ch).max()
+        * edf_info["record_length"][1]
+        / edf_info["record_length"][0]
+    )
+    del n_samps
+    info = _empty_info(sfreq)
+    info["meas_date"] = edf_info["meas_date"]
+    info["chs"] = chs
+    info["ch_names"] = ch_names
+
+    # Subject information
+    info["subject_info"] = {}
+
+    # String subject identifier
+    if edf_info["subject_info"].get("id") is not None:
+        info["subject_info"]["his_id"] = edf_info["subject_info"]["id"]
+    # Subject sex (0=unknown, 1=male, 2=female)
+    if edf_info["subject_info"].get("sex") is not None:
+        if edf_info["subject_info"]["sex"] == "M":
+            info["subject_info"]["sex"] = 1
+        elif edf_info["subject_info"]["sex"] == "F":
+            info["subject_info"]["sex"] = 2
+        else:
+            info["subject_info"]["sex"] = 0
+    # Subject names (first, middle, last).
+    if edf_info["subject_info"].get("name") is not None:
+        sub_names = edf_info["subject_info"]["name"].split("_")
+        if len(sub_names) < 2 or len(sub_names) > 3:
+            info["subject_info"]["last_name"] = edf_info["subject_info"]["name"]
+        elif len(sub_names) == 2:
+            info["subject_info"]["first_name"] = sub_names[0]
+            info["subject_info"]["last_name"] = sub_names[1]
+        else:
+            info["subject_info"]["first_name"] = sub_names[0]
+            info["subject_info"]["middle_name"] = sub_names[1]
+            info["subject_info"]["last_name"] = sub_names[2]
+    # Birthday in (year, month, day) format.
+    if isinstance(edf_info["subject_info"].get("birthday"), datetime):
+        info["subject_info"]["birthday"] = date(
+            edf_info["subject_info"]["birthday"].year,
+            edf_info["subject_info"]["birthday"].month,
+            edf_info["subject_info"]["birthday"].day,
+        )
+    # Handedness (1=right, 2=left, 3=ambidextrous).
+    if edf_info["subject_info"].get("hand") is not None:
+        info["subject_info"]["hand"] = int(edf_info["subject_info"]["hand"])
+    # Height in meters.
+    if edf_info["subject_info"].get("height") is not None:
+        info["subject_info"]["height"] = float(edf_info["subject_info"]["height"])
+    # Weight in kilograms.
+    if edf_info["subject_info"].get("weight") is not None:
+        info["subject_info"]["weight"] = float(edf_info["subject_info"]["weight"])
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 6, $0.02):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+sed -n '700,850p' /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+        info["subject_info"]["weight"] = float(edf_info["subject_info"]["weight"])
+    # Remove values after conversion to help with in-memory anonymization
+    for key in ("subject_info", "meas_date"):
+        del edf_info[key]
+
+    # Filter settings
+    if filt_ch_idxs := [x for x in range(len(sel)) if x not in stim_channel_idxs]:
+        _set_prefilter(info, edf_info, filt_ch_idxs, "highpass")
+        _set_prefilter(info, edf_info, filt_ch_idxs, "lowpass")
+
+    if np.isnan(info["lowpass"]):
+        info["lowpass"] = info["sfreq"] / 2.0
+
+    if info["highpass"] > info["lowpass"]:
+        warn(
+            f"Highpass cutoff frequency {info['highpass']} is greater "
+            f"than lowpass cutoff frequency {info['lowpass']}, "
+            "setting values to 0 and Nyquist."
+        )
+        info["highpass"] = 0.0
+        info["lowpass"] = info["sfreq"] / 2.0
+
+    # Some keys to be consistent with FIF measurement info
+    info["description"] = None
+    edf_info["nsamples"] = int(edf_info["n_records"] * max_samp)
+
+    info._unlocked = False
+    info._update_redundant()
+
+    # Later used for reading
+    edf_info["cal"] = physical_ranges / cals
+
+    # physical dimension in µV
+    edf_info["offsets"] = (
+        edf_info["physical_min"] - edf_info["digital_min"] * edf_info["cal"]
+    )
+    del edf_info["physical_min"]
+    del edf_info["digital_min"]
+
+    if edf_info["subtype"] == "bdf":
+        edf_info["cal"][stim_channel_idxs] = 1
+        edf_info["offsets"][stim_channel_idxs] = 0
+        edf_info["units"][stim_channel_idxs] = 1
+
+    return info, edf_info, orig_units
+
+
+def _parse_prefilter_string(prefiltering):
+    """Parse prefilter string from EDF+ and BDF headers."""
+    filter_types = ["HP", "LP"]
+    filter_strings = {t: [] for t in filter_types}
+    for filt in prefiltering:
+        for t in filter_types:
+            matches = re.findall(rf"{t}:\s*([a-zA-Z0-9,.]+)(Hz)?", filt)
+            value = ""
+            for match in matches:
+                if match[0]:
+                    value = match[0].replace("Hz", "").replace(",", ".")
+            filter_strings[t].append(value)
+    return np.array(filter_strings["HP"]), np.array(filter_strings["LP"])
+
+
+def _prefilter_float(filt):
+    if isinstance(filt, int | float | np.number):
+        return filt
+    if filt == "DC":
+        return 0.0
+    if filt.replace(".", "", 1).isdigit():
+        return float(filt)
+    return np.nan
+
+
+def _set_prefilter(info, edf_info, ch_idxs, key):
+    value = 0
+    if len(values := edf_info.get(key, [])):
+        values = [x for i, x in enumerate(values) if i in ch_idxs]
+        if len(np.unique(values)) > 1:
+            warn(
+                f"Channels contain different {key} filters. "
+                f"{'Highest' if key == 'highpass' else 'Lowest'} filter "
+                "setting will be stored."
+            )
+            if key == "highpass":
+                value = np.nanmax([_prefilter_float(x) for x in values])
+            else:
+                value = np.nanmin([_prefilter_float(x) for x in values])
+        else:
+            value = _prefilter_float(values[0])
+    if not np.isnan(value) and value != 0:
+        info[key] = value
+
+
+def _edf_str(x):
+    return x.decode("latin-1").split("\x00")[0]
+
+
+def _edf_str_num(x):
+    return _edf_str(x).replace(",", ".")
+
+
+def _read_edf_header(
+    fname, exclude, infer_types, include=None, exclude_after_unique=False
+):
+    """Read header information from EDF+ or BDF file."""
+    edf_info = {"events": []}
+
+    with open(fname, "rb") as fid:
+        fid.read(8)  # version (unused here)
+
+        # patient ID
+        patient = {}
+        id_info = fid.read(80).decode("latin-1").rstrip()
+        id_info = id_info.split(" ")
+        if len(id_info):
+            patient["id"] = id_info[0]
+            if len(id_info) >= 4:
+                try:
+                    birthdate = datetime.strptime(id_info[2], "%d-%b-%Y")
+                except ValueError:
+                    birthdate = "X"
+                patient["sex"] = id_info[1]
+                patient["birthday"] = birthdate
+                patient["name"] = id_info[3]
+                if len(id_info) > 4:
+                    for info in id_info[4:]:
+                        if "=" in info:
+                            key, value = info.split("=")
+                            err = f"patient {key} info cannot be {value}, skipping."
+                            if key in ["weight", "height"]:
+                                try:
+                                    patient[key] = float(value)
+                                except ValueError:
+                                    logger.debug(err)
+                                    continue
+                            elif key in ["hand"]:
+                                try:
+                                    patient[key] = int(value)
+                                except ValueError:
+                                    logger.debug(err)
+                                    continue
+                            else:
+                                warn(f"Invalid patient information {key}")
+
+        # Recording ID
+        rec_info = fid.read(80).decode("latin-1").rstrip().split(" ")
+        # if the measurement date is available in the recording info, it's used instead
+        # of the file's meas_date since it contains all 4 digits of the year.
+        meas_date = None
+        if len(rec_info) == 5:
+            try:
+                meas_date = datetime.strptime(rec_info[1], "%d-%b-%Y")
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 7, $0.02):
+```
+sed -n '850,1000p' /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+                meas_date = datetime.strptime(rec_info[1], "%d-%b-%Y")
+            except Exception:
+                meas_date = None
+            else:
+                fid.read(8)  # skip the file's meas_date
+        if meas_date is None:
+            try:
+                meas_date = fid.read(8).decode("latin-1")
+                day, month, year = (int(x) for x in meas_date.split("."))
+                year = year + 2000 if year < 85 else year + 1900
+                meas_date = datetime(year, month, day)
+            except Exception:
+                meas_date = None
+        if meas_date is not None:
+            # try to get the hour/minute/sec from the recording info
+            try:
+                meas_time = fid.read(8).decode("latin-1")
+                hour, minute, second = (int(x) for x in meas_time.split("."))
+            except Exception:
+                hour, minute, second = 0, 0, 0
+            meas_date = meas_date.replace(
+                hour=hour, minute=minute, second=second, tzinfo=timezone.utc
+            )
+        else:
+            fid.read(8)  # skip the file's measurement time
+            warn("Invalid measurement date encountered in the header.")
+
+        header_nbytes = int(_edf_str(fid.read(8)))
+        # The following 44 bytes sometimes identify the file type, but this is
+        # not guaranteed. Therefore, we skip this field and use the file
+        # extension to determine the subtype (EDF or BDF, which differ in the
+        # number of bytes they use for the data records; EDF uses 2 bytes
+        # whereas BDF uses 3 bytes).
+        fid.read(44)
+        subtype = os.path.splitext(fname)[1][1:].lower()
+
+        n_records = int(_edf_str(fid.read(8)))
+        record_length = float(_edf_str(fid.read(8)))
+        record_length = np.array([record_length, 1.0])  # in seconds
+        if record_length[0] == 0:
+            record_length[0] = 1.0
+            warn(
+                "Header information is incorrect for record length. Default "
+                "record length set to 1.\nIt is possible that this file only"
+                " contains annotations and no signals. In that case, please "
+                "use mne.read_annotations() to load these annotations."
+            )
+
+        nchan = int(_edf_str(fid.read(4)))
+        channels = list(range(nchan))
+
+        # read in 16 byte labels and strip any extra spaces at the end
+        ch_labels = [fid.read(16).strip().decode("latin-1") for _ in channels]
+
+        # get channel names and optionally channel type
+        # EDF specification contains 16 bytes that encode channel names,
+        # optionally prefixed by a string representing channel type separated
+        # by a space
+        if infer_types:
+            ch_types, ch_names = [], []
+            for ch_label in ch_labels:
+                ch_type, ch_name = "EEG", ch_label  # default to EEG
+                parts = ch_label.split(" ")
+                if len(parts) > 1:
+                    if parts[0].upper() in CH_TYPE_MAPPING:
+                        ch_type = parts[0].upper()
+                        ch_name = " ".join(parts[1:])
+                        logger.info(
+                            f"Channel '{ch_label}' recognized as type "
+                            f"{ch_type} (renamed to '{ch_name}')."
+                        )
+                ch_types.append(ch_type)
+                ch_names.append(ch_name)
+        else:
+            ch_types, ch_names = ["EEG"] * nchan, ch_labels
+
+        tal_idx = _find_tal_idx(ch_names)
+        if exclude_after_unique:
+            # make sure channel names are unique
+            ch_names = _unique_channel_names(ch_names)
+
+        exclude = _find_exclude_idx(ch_names, exclude, include)
+        exclude = np.concatenate([exclude, tal_idx])
+        sel = np.setdiff1d(np.arange(len(ch_names)), exclude)
+
+        for ch in channels:
+            fid.read(80)  # transducer
+        units = [fid.read(8).strip().decode("latin-1") for ch in channels]
+        edf_info["units"] = list()
+        for i, unit in enumerate(units):
+            if i in exclude:
+                continue
+            # allow μ (greek mu), µ (micro symbol) and μ (sjis mu) codepoints
+            if unit in ("\u03bcV", "\u00b5V", "\x83\xcaV", "uV"):
+                edf_info["units"].append(1e-6)
+            elif unit == "mV":
+                edf_info["units"].append(1e-3)
+            else:
+                edf_info["units"].append(1)
+        edf_info["units"] = np.array(edf_info["units"], float)
+
+        ch_names = [ch_names[idx] for idx in sel]
+        ch_types = [ch_types[idx] for idx in sel]
+        units = [units[idx] for idx in sel]
+
+        if not exclude_after_unique:
+            # make sure channel names are unique
+            ch_names = _unique_channel_names(ch_names)
+        orig_units = dict(zip(ch_names, units))
+
+        physical_min = np.array([float(_edf_str_num(fid.read(8))) for ch in channels])[
+            sel
+        ]
+        physical_max = np.array([float(_edf_str_num(fid.read(8))) for ch in channels])[
+            sel
+        ]
+        digital_min = np.array([float(_edf_str_num(fid.read(8))) for ch in channels])[
+            sel
+        ]
+        digital_max = np.array([float(_edf_str_num(fid.read(8))) for ch in channels])[
+            sel
+        ]
+        prefiltering = np.array([_edf_str(fid.read(80)).strip() for ch in channels])
+        highpass, lowpass = _parse_prefilter_string(prefiltering)
+
+        # number of samples per record
+        n_samps = np.array([int(_edf_str(fid.read(8))) for ch in channels])
+
+        # Populate edf_info
+        edf_info.update(
+            ch_names=ch_names,
+            ch_types=ch_types,
+            data_offset=header_nbytes,
+            digital_max=digital_max,
+            digital_min=digital_min,
+            highpass=highpass,
+            sel=sel,
+            lowpass=lowpass,
+            meas_date=meas_date,
+            n_records=n_records,
+            n_samps=n_samps,
+            nchan=nchan,
+            subject_info=patient,
+            physical_max=physical_max,
+            physical_min=physical_min,
+            record_length=record_length,
+            subtype=subtype,
+            tal_idx=tal_idx,
+        )
+
+        fid.read(32 * nchan).decode()  # reserved
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 8, $0.03):
+```
+grep -n "sel\|n_samps" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py | head -60
+```
+
+Tool:
+<returncode>
+0
+<output>
+135:        self,
+203:            tal_data = self._read_segment_file(
+204:                np.empty((0, self.n_times)),
+208:                int(self.n_times),
+217:            self.set_annotations(annotations, on_missing="warn")
+219:    def _read_segment_file(self, data, idx, fi, start, stop, cals, mult):
+227:            self._raw_extras[fi],
+228:            self.filenames[fi],
+282:        self,
+313:        onset, duration, desc = _get_annotations_gdf(edf_info, self.info["sfreq"])
+315:        self.set_annotations(
+321:    def _read_segment_file(self, data, idx, fi, start, stop, cals, mult):
+329:            self._raw_extras[fi],
+330:            self.filenames[fi],
+355:    n_samps = raw_extras["n_samps"]
+361:    orig_sel = raw_extras["sel"]
+368:    read_sel = np.concatenate([orig_sel[idx], tal_idx])
+376:    ch_offsets = np.cumsum(np.concatenate([[0], n_samps]), dtype=np.int64)
+388:        # row. Ignore TAL/annotations channel and only store `orig_sel`
+389:        ones = np.zeros((len(orig_sel), data.shape[-1]), dtype=data.dtype)
+391:        n_smp_read = [0 for _ in range(len(orig_sel))]
+405:            # loop over selected channels, ci=channel selection
+406:            for ii, ci in enumerate(read_sel):
+420:                assert ci == orig_sel[orig_idx]
+422:                if n_samps[ci] != buf_len:
+425:                        old = np.linspace(0, 1, n_samps[ci] + 1, True)
+463:            # give warning if we resampled a subselection
+547:    sel = edf_info["sel"]  # selection of channels not excluded
+548:    ch_names = edf_info["ch_names"]  # of length len(sel)
+550:        ch_types = edf_info["ch_types"]  # of length len(sel)
+552:        ch_types = [None] * len(sel)
+553:    if len(sel) == 0:  # only want stim channels
+554:        n_samps = edf_info["n_samps"][[0]]
+556:        n_samps = edf_info["n_samps"][sel]
+638:        edf_info["max_samp"] = max_samp = n_samps[picks].max()
+640:        edf_info["max_samp"] = max_samp = n_samps.max()
+645:    not_stim_ch = [x for x in range(n_samps.shape[0]) if x not in stim_channel_idxs]
+647:        not_stim_ch = list(range(len(n_samps)))
+649:        np.take(n_samps, not_stim_ch).max()
+653:    del n_samps
+706:    if filt_ch_idxs := [x for x in range(len(sel)) if x not in stim_channel_idxs]:
+933:        sel = np.setdiff1d(np.arange(len(ch_names)), exclude)
+951:        ch_names = [ch_names[idx] for idx in sel]
+952:        ch_types = [ch_types[idx] for idx in sel]
+953:        units = [units[idx] for idx in sel]
+961:            sel
+964:            sel
+967:            sel
+970:            sel
+976:        n_samps = np.array([int(_edf_str(fid.read(8))) for ch in channels])
+986:            sel=sel,
+990:            n_samps=n_samps,
+1007:        read_records = total_samps // np.sum(n_samps)
+1132:            sel = np.setdiff1d(np.arange(len(ch_names)), exclude)
+1145:            ch_names = [ch_names[idx] for idx in sel]
+1154:            n_samps = np.fromfile(fid, INT32, len(channels))
+1161:                [GDFTYPE_BYTE[t] * n_samps[i] for i, t in enumerate(dtype)]
+1176:                sel=sel,
+1181:                n_samps=n_samps,
+1328:            sel = np.setdiff1d(np.arange(len(ch_names)), exclude)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 9, $0.04):
+```
+sed -n '353,500p' /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+def _read_segment_file(data, idx, fi, start, stop, raw_extras, filenames, cals, mult):
+    """Read a chunk of raw data."""
+    n_samps = raw_extras["n_samps"]
+    buf_len = int(raw_extras["max_samp"])
+    dtype = raw_extras["dtype_np"]
+    dtype_byte = raw_extras["dtype_byte"]
+    data_offset = raw_extras["data_offset"]
+    stim_channel_idxs = raw_extras["stim_channel_idxs"]
+    orig_sel = raw_extras["sel"]
+    tal_idx = raw_extras.get("tal_idx", np.empty(0, int))
+    subtype = raw_extras["subtype"]
+    cal = raw_extras["cal"]
+    offsets = raw_extras["offsets"]
+    gains = raw_extras["units"]
+
+    read_sel = np.concatenate([orig_sel[idx], tal_idx])
+    tal_data = []
+
+    # only try to read the stim channel if it's not None and it's
+    # actually one of the requested channels
+    idx_arr = np.arange(idx.start, idx.stop) if isinstance(idx, slice) else idx
+
+    # We could read this one EDF block at a time, which would be this:
+    ch_offsets = np.cumsum(np.concatenate([[0], n_samps]), dtype=np.int64)
+    block_start_idx, r_lims, _ = _blk_read_lims(start, stop, buf_len)
+    # But to speed it up, we really need to read multiple blocks at once,
+    # Otherwise we can end up with e.g. 18,181 chunks for a 20 MB file!
+    # Let's do ~10 MB chunks:
+    n_per = max(10 * 1024 * 1024 // (ch_offsets[-1] * dtype_byte), 1)
+    with open(filenames, "rb", buffering=0) as fid:
+        # Extract data
+        start_offset = data_offset + block_start_idx * ch_offsets[-1] * dtype_byte
+
+        # first read everything into the `ones` array. For channels with
+        # lower sampling frequency, there will be zeros left at the end of the
+        # row. Ignore TAL/annotations channel and only store `orig_sel`
+        ones = np.zeros((len(orig_sel), data.shape[-1]), dtype=data.dtype)
+        # save how many samples have already been read per channel
+        n_smp_read = [0 for _ in range(len(orig_sel))]
+
+        # read data in chunks
+        for ai in range(0, len(r_lims), n_per):
+            block_offset = ai * ch_offsets[-1] * dtype_byte
+            n_read = min(len(r_lims) - ai, n_per)
+            fid.seek(start_offset + block_offset, 0)
+            # Read and reshape to (n_chunks_read, ch0_ch1_ch2_ch3...)
+            many_chunk = _read_ch(
+                fid, subtype, ch_offsets[-1] * n_read, dtype_byte, dtype
+            ).reshape(n_read, -1)
+            r_sidx = r_lims[ai][0]
+            r_eidx = buf_len * (n_read - 1) + r_lims[ai + n_read - 1][1]
+
+            # loop over selected channels, ci=channel selection
+            for ii, ci in enumerate(read_sel):
+                # This now has size (n_chunks_read, n_samp[ci])
+                ch_data = many_chunk[:, ch_offsets[ci] : ch_offsets[ci + 1]].copy()
+
+                # annotation channel has to be treated separately
+                if ci in tal_idx:
+                    tal_data.append(ch_data)
+                    continue
+
+                orig_idx = idx_arr[ii]
+                ch_data = ch_data * cal[orig_idx]
+                ch_data += offsets[orig_idx]
+                ch_data *= gains[orig_idx]
+
+                assert ci == orig_sel[orig_idx]
+
+                if n_samps[ci] != buf_len:
+                    if orig_idx in stim_channel_idxs:
+                        # Stim channel will be interpolated
+                        old = np.linspace(0, 1, n_samps[ci] + 1, True)
+                        new = np.linspace(0, 1, buf_len, False)
+                        ch_data = np.append(ch_data, np.zeros((len(ch_data), 1)), -1)
+                        ch_data = interp1d(old, ch_data, kind="zero", axis=-1)(new)
+                elif orig_idx in stim_channel_idxs:
+                    ch_data = np.bitwise_and(ch_data.astype(int), 2**17 - 1)
+
+                one_i = ch_data.ravel()[r_sidx:r_eidx]
+
+                # note how many samples have been read
+                smp_read = n_smp_read[orig_idx]
+                ones[orig_idx, smp_read : smp_read + len(one_i)] = one_i
+                n_smp_read[orig_idx] += len(one_i)
+
+        # skip if no data was requested, ie. only annotations were read
+        if sum(n_smp_read) > 0:
+            # expected number of samples, equals maximum sfreq
+            smp_exp = data.shape[-1]
+            assert max(n_smp_read) == smp_exp
+
+            # resample data after loading all chunks to prevent edge artifacts
+            resampled = False
+            for i, smp_read in enumerate(n_smp_read):
+                # nothing read, nothing to resample
+                if smp_read == 0:
+                    continue
+                # upsample if n_samples is lower than from highest sfreq
+                if smp_read != smp_exp:
+                    assert (ones[i, smp_read:] == 0).all()  # sanity check
+                    ones[i, :] = resample(
+                        ones[i, :smp_read].astype(np.float64),
+                        smp_exp,
+                        smp_read,
+                        npad=0,
+                        axis=-1,
+                    )
+                    resampled = True
+
+            # give warning if we resampled a subselection
+            if resampled and raw_extras["nsamples"] != (stop - start):
+                warn(
+                    "Loading an EDF with mixed sampling frequencies and "
+                    "preload=False will result in edge artifacts. "
+                    "It is recommended to use preload=True."
+                    "See also https://github.com/mne-tools/mne-python/issues/10635"
+                )
+
+            _mult_cal_one(data[:, :], ones, idx, cals, mult)
+
+    if len(tal_data) > 1:
+        tal_data = np.concatenate([tal.ravel() for tal in tal_data])
+        tal_data = tal_data[np.newaxis, :]
+    return tal_data
+
+
+@fill_doc
+def _read_header(fname, exclude, infer_types, include=None, exclude_after_unique=False):
+    """Unify EDF, BDF and GDF _read_header call.
+
+    Parameters
+    ----------
+    fname : str
+        Path to the EDF+, BDF, or GDF file.
+    exclude : list of str | str
+        Channel names to exclude. This can help when reading data with
+        different sampling rates to avoid unnecessary resampling. A str is
+        interpreted as a regular expression.
+    infer_types : bool
+        If True, try to infer channel types from channel labels. If a channel
+        label starts with a known type (such as 'EEG') followed by a space and
+        a name (such as 'Fp1'), the channel type will be set accordingly, and
+        the channel will be renamed to the original label without the prefix.
+        For unknown prefixes, the type will be 'EEG' and the name will not be
+        modified. If False, do not infer types and assume all channels are of
+        type 'EEG'.
+    include : list of str | str
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 10, $0.04):
+```
+sed -n '920,1000p' /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+                        )
+                ch_types.append(ch_type)
+                ch_names.append(ch_name)
+        else:
+            ch_types, ch_names = ["EEG"] * nchan, ch_labels
+
+        tal_idx = _find_tal_idx(ch_names)
+        if exclude_after_unique:
+            # make sure channel names are unique
+            ch_names = _unique_channel_names(ch_names)
+
+        exclude = _find_exclude_idx(ch_names, exclude, include)
+        exclude = np.concatenate([exclude, tal_idx])
+        sel = np.setdiff1d(np.arange(len(ch_names)), exclude)
+
+        for ch in channels:
+            fid.read(80)  # transducer
+        units = [fid.read(8).strip().decode("latin-1") for ch in channels]
+        edf_info["units"] = list()
+        for i, unit in enumerate(units):
+            if i in exclude:
+                continue
+            # allow μ (greek mu), µ (micro symbol) and μ (sjis mu) codepoints
+            if unit in ("\u03bcV", "\u00b5V", "\x83\xcaV", "uV"):
+                edf_info["units"].append(1e-6)
+            elif unit == "mV":
+                edf_info["units"].append(1e-3)
+            else:
+                edf_info["units"].append(1)
+        edf_info["units"] = np.array(edf_info["units"], float)
+
+        ch_names = [ch_names[idx] for idx in sel]
+        ch_types = [ch_types[idx] for idx in sel]
+        units = [units[idx] for idx in sel]
+
+        if not exclude_after_unique:
+            # make sure channel names are unique
+            ch_names = _unique_channel_names(ch_names)
+        orig_units = dict(zip(ch_names, units))
+
+        physical_min = np.array([float(_edf_str_num(fid.read(8))) for ch in channels])[
+            sel
+        ]
+        physical_max = np.array([float(_edf_str_num(fid.read(8))) for ch in channels])[
+            sel
+        ]
+        digital_min = np.array([float(_edf_str_num(fid.read(8))) for ch in channels])[
+            sel
+        ]
+        digital_max = np.array([float(_edf_str_num(fid.read(8))) for ch in channels])[
+            sel
+        ]
+        prefiltering = np.array([_edf_str(fid.read(80)).strip() for ch in channels])
+        highpass, lowpass = _parse_prefilter_string(prefiltering)
+
+        # number of samples per record
+        n_samps = np.array([int(_edf_str(fid.read(8))) for ch in channels])
+
+        # Populate edf_info
+        edf_info.update(
+            ch_names=ch_names,
+            ch_types=ch_types,
+            data_offset=header_nbytes,
+            digital_max=digital_max,
+            digital_min=digital_min,
+            highpass=highpass,
+            sel=sel,
+            lowpass=lowpass,
+            meas_date=meas_date,
+            n_records=n_records,
+            n_samps=n_samps,
+            nchan=nchan,
+            subject_info=patient,
+            physical_max=physical_max,
+            physical_min=physical_min,
+            record_length=record_length,
+            subtype=subtype,
+            tal_idx=tal_idx,
+        )
+
+        fid.read(32 * nchan).decode()  # reserved
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 11, $0.06):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+cd /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx && git log --oneline -10 2>/dev/null || echo "Not a git repo"
+```
+
+Tool:
+<returncode>
+0
+<output>
+Not a git repo
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 12, $0.07):
+```
+cd /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx && ls -la
+```
+
+Tool:
+<returncode>
+0
+<output>
+total 160
+drwx------    3 user  staff     96 May  2 03:06 .
+drwx------@ 171 user  staff   5472 May  2 03:06 ..
+-rw-r--r--    1 user  staff  78280 May  2 03:06 edf.py
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 13, $0.08):
+```
+grep -n "orig_sel\|read_sel\|cal\|offsets\|gains" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py | head -80
+```
+
+Tool:
+<returncode>
+0
+<output>
+17:from ..._fiff.utils import _blk_read_lims, _mult_cal_one
+21:from ..base import BaseRaw, _get_scaling
+123:    TAL channels called 'EDF Annotations' or 'BDF Annotations' are parsed and
+183:                scaling = _get_scaling(ch_type.lower(), orig_units[this_ch])
+184:                edf_info["units"][k] /= scaling
+219:    def _read_segment_file(self, data, idx, fi, start, stop, cals, mult):
+229:            cals,
+321:    def _read_segment_file(self, data, idx, fi, start, stop, cals, mult):
+331:            cals,
+353:def _read_segment_file(data, idx, fi, start, stop, raw_extras, filenames, cals, mult):
+361:    orig_sel = raw_extras["sel"]
+364:    cal = raw_extras["cal"]
+365:    offsets = raw_extras["offsets"]
+366:    gains = raw_extras["units"]
+368:    read_sel = np.concatenate([orig_sel[idx], tal_idx])
+376:    ch_offsets = np.cumsum(np.concatenate([[0], n_samps]), dtype=np.int64)
+381:    n_per = max(10 * 1024 * 1024 // (ch_offsets[-1] * dtype_byte), 1)
+384:        start_offset = data_offset + block_start_idx * ch_offsets[-1] * dtype_byte
+388:        # row. Ignore TAL/annotations channel and only store `orig_sel`
+389:        ones = np.zeros((len(orig_sel), data.shape[-1]), dtype=data.dtype)
+391:        n_smp_read = [0 for _ in range(len(orig_sel))]
+395:            block_offset = ai * ch_offsets[-1] * dtype_byte
+400:                fid, subtype, ch_offsets[-1] * n_read, dtype_byte, dtype
+406:            for ii, ci in enumerate(read_sel):
+408:                ch_data = many_chunk[:, ch_offsets[ci] : ch_offsets[ci + 1]].copy()
+416:                ch_data = ch_data * cal[orig_idx]
+417:                ch_data += offsets[orig_idx]
+418:                ch_data *= gains[orig_idx]
+420:                assert ci == orig_sel[orig_idx]
+472:            _mult_cal_one(data[:, :], ones, idx, cals, mult)
+482:    """Unify EDF, BDF and GDF _read_header call.
+558:    physical_ranges = edf_info["physical_max"] - edf_info["physical_min"]
+559:    cals = edf_info["digital_max"] - edf_info["digital_min"]
+560:    bad_idx = np.where((~np.isfinite(cals)) | (cals == 0))[0]
+563:            "Scaling factor is not defined in following channels:\n"
+566:        cals[bad_idx] = 1
+567:    bad_idx = np.where(physical_ranges == 0)[0]
+570:            "Physical range is not defined in following channels:\n"
+573:        physical_ranges[bad_idx] = 1
+584:        chan_info["cal"] = 1.0
+730:    edf_info["cal"] = physical_ranges / cals
+732:    # physical dimension in µV
+733:    edf_info["offsets"] = (
+734:        edf_info["physical_min"] - edf_info["digital_min"] * edf_info["cal"]
+736:    del edf_info["physical_min"]
+740:        edf_info["cal"][stim_channel_idxs] = 1
+741:        edf_info["offsets"][stim_channel_idxs] = 0
+960:        physical_min = np.array([float(_edf_str_num(fid.read(8))) for ch in channels])[
+963:        physical_max = np.array([float(_edf_str_num(fid.read(8))) for ch in channels])[
+993:            physical_max=physical_max,
+994:            physical_min=physical_min,
+1146:            physical_min = np.fromfile(fid, FLOAT64, len(channels))
+1147:            physical_max = np.fromfile(fid, FLOAT64, len(channels))
+1184:                physical_max=physical_max,
+1185:                physical_min=physical_min,
+1222:            scale = ("Unknown", "No", "Yes", "Corrected")
+1235:            patient["smoking"] = scale[sadm % 4]
+1236:            patient["alcohol_abuse"] = scale[(sadm >> 2) % 4]
+1237:            patient["drug_abuse"] = scale[(sadm >> 4) % 4]
+1238:            patient["medication"] = scale[(sadm >> 6) % 4]
+1250:            patient["visual"] = scale[(ghi >> 4) % 4]
+1333:            """The Physical Dimensions are encoded as int16, according to:
+1355:                        f"Unsupported physical dimension for channel {i} "
+1363:            physical_min = np.fromfile(fid, FLOAT64, len(channels))
+1364:            physical_max = np.fromfile(fid, FLOAT64, len(channels))
+1429:                physical_max=physical_max,
+1430:                physical_min=physical_min,
+1543:    If there are several channels called "A" and we want to exclude "A", then
+1662:    TAL channels called 'EDF Annotations' are parsed and extracted annotations
+1821:    TAL channels called 'BDF Annotations' are parsed and extracted annotations
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 14, $0.09):
+```
+sed -n '700,780p' /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+        info["subject_info"]["weight"] = float(edf_info["subject_info"]["weight"])
+    # Remove values after conversion to help with in-memory anonymization
+    for key in ("subject_info", "meas_date"):
+        del edf_info[key]
+
+    # Filter settings
+    if filt_ch_idxs := [x for x in range(len(sel)) if x not in stim_channel_idxs]:
+        _set_prefilter(info, edf_info, filt_ch_idxs, "highpass")
+        _set_prefilter(info, edf_info, filt_ch_idxs, "lowpass")
+
+    if np.isnan(info["lowpass"]):
+        info["lowpass"] = info["sfreq"] / 2.0
+
+    if info["highpass"] > info["lowpass"]:
+        warn(
+            f"Highpass cutoff frequency {info['highpass']} is greater "
+            f"than lowpass cutoff frequency {info['lowpass']}, "
+            "setting values to 0 and Nyquist."
+        )
+        info["highpass"] = 0.0
+        info["lowpass"] = info["sfreq"] / 2.0
+
+    # Some keys to be consistent with FIF measurement info
+    info["description"] = None
+    edf_info["nsamples"] = int(edf_info["n_records"] * max_samp)
+
+    info._unlocked = False
+    info._update_redundant()
+
+    # Later used for reading
+    edf_info["cal"] = physical_ranges / cals
+
+    # physical dimension in µV
+    edf_info["offsets"] = (
+        edf_info["physical_min"] - edf_info["digital_min"] * edf_info["cal"]
+    )
+    del edf_info["physical_min"]
+    del edf_info["digital_min"]
+
+    if edf_info["subtype"] == "bdf":
+        edf_info["cal"][stim_channel_idxs] = 1
+        edf_info["offsets"][stim_channel_idxs] = 0
+        edf_info["units"][stim_channel_idxs] = 1
+
+    return info, edf_info, orig_units
+
+
+def _parse_prefilter_string(prefiltering):
+    """Parse prefilter string from EDF+ and BDF headers."""
+    filter_types = ["HP", "LP"]
+    filter_strings = {t: [] for t in filter_types}
+    for filt in prefiltering:
+        for t in filter_types:
+            matches = re.findall(rf"{t}:\s*([a-zA-Z0-9,.]+)(Hz)?", filt)
+            value = ""
+            for match in matches:
+                if match[0]:
+                    value = match[0].replace("Hz", "").replace(",", ".")
+            filter_strings[t].append(value)
+    return np.array(filter_strings["HP"]), np.array(filter_strings["LP"])
+
+
+def _prefilter_float(filt):
+    if isinstance(filt, int | float | np.number):
+        return filt
+    if filt == "DC":
+        return 0.0
+    if filt.replace(".", "", 1).isdigit():
+        return float(filt)
+    return np.nan
+
+
+def _set_prefilter(info, edf_info, ch_idxs, key):
+    value = 0
+    if len(values := edf_info.get(key, [])):
+        values = [x for i, x in enumerate(values) if i in ch_idxs]
+        if len(np.unique(values)) > 1:
+            warn(
+                f"Channels contain different {key} filters. "
+                f"{'Highest' if key == 'highpass' else 'Lowest'} filter "
+                "setting will be stored."
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 15, $0.10):
+```
+sed -n '727,745p' /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpe6m61vmx/edf.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+    info._update_redundant()
+
+    # Later used for reading
+    edf_info["cal"] = physical_ranges / cals
+
+    # physical dimension in µV
+    edf_info["offsets"] = (
+        edf_info["physical_min"] - edf_info["digital_min"] * edf_info["cal"]
+    )
+    del edf_info["physical_min"]
+    del edf_info["digital_min"]
+
+    if edf_info["subtype"] == "bdf":
+        edf_info["cal"][stim_channel_idxs] = 1
+        edf_info["offsets"][stim_channel_idxs] = 0
+        edf_info["units"][stim_channel_idxs] = 1
+
+    return info, edf_info, orig_units
+
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Limits exceeded. Limits: 0 steps, $0.1.
+Current spend: 15 steps, $0.10.
+New step limit: 
+=== STDERR ===

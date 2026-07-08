@@ -1,0 +1,124 @@
+=== STDOUT ===
+👋 This is mini-swe-agent version 2.2.8.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/Users/user/Library/Application Support/mini-swe-agent/.env'
+Building agent config from specs: 
+['/Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/config/mini.yaml']
+
+System:
+You are a helpful assistant that can interact with a computer.
+
+User:
+Please solve this issue: Fix the bug in the file /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyeo8l22c/edf.py.
+
+Context: This bug is in MNE-Python's artifact rejection pipeline. Artifact rejection removes noise from muscle movements, eye
+blinks, and bad electrodes. ICA (Independent Component Analysis) separates brain signals from artifacts. Bugs here mean 
+artifact contamination survives into cleaned data.
+
+The file is from the MNE-Python neuroscience library (PR #11549: fix EDF loading: Resample channels after loading whole 
+file).
+Read the file, identify the bug, and fix it in place. Only modify 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpyeo8l22c/edf.py. Do not install packages or run tests.
+
+You can execute bash commands and edit files to implement the necessary changes.
+
+## Recommended Workflow
+
+This workflow should be done step-by-step so that you can iterate on your changes and any possible problems.
+
+1. Analyze the codebase by finding and reading relevant files
+2. Create a script to reproduce the issue
+3. Edit the source code to resolve the issue
+4. Verify your fix works by running your script again
+5. Test edge cases to ensure your fix is robust
+6. Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+   Do not combine it with any other command. <important>After this command, you cannot continue working on this 
+task.</important>
+
+## Command Execution Rules
+
+You are operating in an environment where
+
+1. You issue at least one command
+2. The system executes the command(s) in a subshell
+3. You see the result(s)
+4. You write your next command(s)
+
+Each response should include:
+
+1. **Reasoning text** where you explain your analysis and plan
+2. At least one tool call with your command
+
+**CRITICAL REQUIREMENTS:**
+
+- Your response SHOULD include reasoning text explaining what you're doing
+- Your response MUST include AT LEAST ONE bash tool call
+- Directory or environment variable changes are not persistent. Every action is executed in a new subshell.
+- However, you can prefix any action with `MY_ENV_VAR=MY_VALUE cd /path/to/working/dir && ...` or write/load environment 
+variables from files
+- Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+  Do not combine it with any other command. <important>After this command, you cannot continue working on this 
+task.</important>
+
+Example of a CORRECT response:
+<example_response>
+I need to understand the structure of the repository first. Let me check what files are in the current directory to get a 
+better understanding of the codebase.
+
+[Makes bash tool call with {"command": "ls -la"} as arguments]
+</example_response>
+
+<system_information>
+Darwin 25.4.0 Darwin Kernel Version 25.4.0: Thu Mar 19 19:30:44 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6000 x86_64
+</system_information>
+
+## Useful command examples
+
+### Create a new file:
+
+```bash
+cat <<'EOF' > newfile.py
+import numpy as np
+hello = "world"
+print(hello)
+EOF
+```
+
+### Edit files with sed:<important>
+You are on MacOS. For all the below examples, you need to use `sed -i ''` instead of `sed -i`.
+</important>```bash
+# Replace all occurrences
+sed -i 's/old_string/new_string/g' filename.py
+
+# Replace only first occurrence
+sed -i 's/old_string/new_string/' filename.py
+
+# Replace first occurrence on line 1
+sed -i '1s/old_string/new_string/' filename.py
+
+# Replace all occurrences in lines 1-10
+sed -i '1,10s/old_string/new_string/g' filename.py
+```
+
+### View file content:
+
+```bash
+# View specific lines with numbers
+nl -ba filename.py | sed -n '10,20p'
+```
+
+### Any other command you want to run
+
+```bash
+anything
+```
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+=== STDERR ===
+Retrying <unknown> in 4 seconds as it raised BadRequestError: litellm.BadRequestError: OpenrouterException - {"error":{"message":"Provider returned error","code":400,"metadata":{"raw":"{\"message\":\"You invoked an unsupported model or your request did not allow prompt caching. See the documentation for more information.\"}","provider_name":"Amazon Bedrock","is_byok":false}},"user_id":"user_3D7yhkiIZfBvr2LvVMDU5Alju8y"}.
+Retrying <unknown> in 4 seconds as it raised BadRequestError: litellm.BadRequestError: OpenrouterException - {"error":{"message":"Provider returned error","code":400,"metadata":{"raw":"{\"message\":\"You invoked an unsupported model or your request did not allow prompt caching. See the documentation for more information.\"}","provider_name":"Amazon Bedrock","is_byok":false}},"user_id":"user_3D7yhkiIZfBvr2LvVMDU5Alju8y"}.
+Retrying <unknown> in 4 seconds as it raised APIError: litellm.APIError: APIError: OpenrouterException - messages.0.content.0.text.cache_control: Extra inputs are not permitted.
+Retrying <unknown> in 8 seconds as it raised BadRequestError: litellm.BadRequestError: OpenrouterException - {"error":{"message":"Provider returned error","code":400,"metadata":{"raw":"{\"message\":\"You invoked an unsupported model or your request did not allow prompt caching. See the documentation for more information.\"}","provider_name":"Amazon Bedrock","is_byok":false}},"user_id":"user_3D7yhkiIZfBvr2LvVMDU5Alju8y"}.
+Retrying <unknown> in 16 seconds as it raised BadRequestError: litellm.BadRequestError: OpenrouterException - {"error":{"message":"Provider returned error","code":400,"metadata":{"raw":"{\"message\":\"You invoked an unsupported model or your request did not allow prompt caching. See the documentation for more information.\"}","provider_name":"Amazon Bedrock","is_byok":false}},"user_id":"user_3D7yhkiIZfBvr2LvVMDU5Alju8y"}.
+Retrying <unknown> in 32 seconds as it raised BadRequestError: litellm.BadRequestError: OpenrouterException - {"error":{"message":"Provider returned error","code":400,"metadata":{"raw":"{\"message\":\"You invoked an unsupported model or your request did not allow prompt caching. See the documentation for more information.\"}","provider_name":"Amazon Bedrock","is_byok":false}},"user_id":"user_3D7yhkiIZfBvr2LvVMDU5Alju8y"}.
+Retrying <unknown> in 60 seconds as it raised APIError: litellm.APIError: APIError: OpenrouterException - messages.0.content.0.text.cache_control: Extra inputs are not permitted.

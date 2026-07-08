@@ -1,0 +1,2156 @@
+=== STDOUT ===
+👋 This is mini-swe-agent version 2.2.8.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/Users/user/Library/Application Support/mini-swe-agent/.env'
+Building agent config from specs: ['/Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/config/mini.yaml']
+
+System:
+You are a helpful assistant that can interact with a computer.
+
+User:
+Please solve this issue: Fix the bug in the file /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py.
+
+Context: This bug is in MNE-Python's time-frequency or spectral analysis pipeline. Power spectral density (PSD) and time-frequency representations (TFR) must preserve correct frequency resolution and units. Dimension mismatches or incorrect 
+normalization lead to wrong power estimates across all frequencies.
+
+The file is from the MNE-Python neuroscience library (PR #13375: FIX: Fix `grand_average` to support `BaseSpectrum` objects).
+Read the file, identify the bug, and fix it in place. Only modify /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py. Do not install packages or run tests.
+
+You can execute bash commands and edit files to implement the necessary changes.
+
+## Recommended Workflow
+
+This workflow should be done step-by-step so that you can iterate on your changes and any possible problems.
+
+1. Analyze the codebase by finding and reading relevant files
+2. Create a script to reproduce the issue
+3. Edit the source code to resolve the issue
+4. Verify your fix works by running your script again
+5. Test edge cases to ensure your fix is robust
+6. Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+   Do not combine it with any other command. <important>After this command, you cannot continue working on this task.</important>
+
+## Command Execution Rules
+
+You are operating in an environment where
+
+1. You issue at least one command
+2. The system executes the command(s) in a subshell
+3. You see the result(s)
+4. You write your next command(s)
+
+Each response should include:
+
+1. **Reasoning text** where you explain your analysis and plan
+2. At least one tool call with your command
+
+**CRITICAL REQUIREMENTS:**
+
+- Your response SHOULD include reasoning text explaining what you're doing
+- Your response MUST include AT LEAST ONE bash tool call
+- Directory or environment variable changes are not persistent. Every action is executed in a new subshell.
+- However, you can prefix any action with `MY_ENV_VAR=MY_VALUE cd /path/to/working/dir && ...` or write/load environment variables from files
+- Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+  Do not combine it with any other command. <important>After this command, you cannot continue working on this task.</important>
+
+Example of a CORRECT response:
+<example_response>
+I need to understand the structure of the repository first. Let me check what files are in the current directory to get a better understanding of the codebase.
+
+[Makes bash tool call with {"command": "ls -la"} as arguments]
+</example_response>
+
+<system_information>
+Darwin 25.4.0 Darwin Kernel Version 25.4.0: Thu Mar 19 19:30:44 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6000 x86_64
+</system_information>
+
+## Useful command examples
+
+### Create a new file:
+
+```bash
+cat <<'EOF' > newfile.py
+import numpy as np
+hello = "world"
+print(hello)
+EOF
+```
+
+### Edit files with sed:<important>
+You are on MacOS. For all the below examples, you need to use `sed -i ''` instead of `sed -i`.
+</important>```bash
+# Replace all occurrences
+sed -i 's/old_string/new_string/g' filename.py
+
+# Replace only first occurrence
+sed -i 's/old_string/new_string/' filename.py
+
+# Replace first occurrence on line 1
+sed -i '1s/old_string/new_string/' filename.py
+
+# Replace all occurrences in lines 1-10
+sed -i '1,10s/old_string/new_string/g' filename.py
+```
+
+### View file content:
+
+```bash
+# View specific lines with numbers
+nl -ba filename.py | sed -n '10,20p'
+```
+
+### Any other command you want to run
+
+```bash
+anything
+```
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 1, $0.00):
+```
+cat /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py
+```
+
+Tool:
+<returncode>
+0
+<output_head>
+# Authors: The MNE-Python contributors.
+# License: BSD-3-Clause
+# Copyright the MNE-Python contributors.
+
+
+from __future__ import annotations  # only needed for Python ≤ 3.9
+
+import os.path as op
+import string
+import sys
+from collections import OrderedDict
+from copy import deepcopy
+from dataclasses import dataclass
+from functools import partial
+from pathlib import Path
+
+import numpy as np
+from scipy.io import loadmat
+from scipy.sparse import csr_array, lil_array
+from scipy.spatial import Delaunay
+from scipy.stats import zscore
+
+from .._fiff.constants import FIFF
+from .._fiff.meas_info import (  # noqa F401
+    Info,
+    MontageMixin,
+    _merge_info,
+    _rename_comps,
+    _unit2human,  # TODO: pybv relies on this, should be made public
+    create_info,
+)
+from .._fiff.pick import (
+    _check_excludes_includes,
+    _pick_data_channels,
+    _picks_by_type,
+    _picks_to_idx,
+    _second_rules,
+    channel_indices_by_type,
+    channel_type,
+    pick_channels,
+    pick_info,
+    pick_types,
+)
+from .._fiff.proj import _has_eeg_average_ref_proj, setup_proj
+from .._fiff.reference import add_reference_channels, set_eeg_reference
+from .._fiff.tag import _rename_list
+from ..bem import _check_origin
+from ..defaults import HEAD_SIZE_DEFAULT, _handle_default
+from ..utils import (
+    _check_dict_keys,
+    _check_fname,
+    _check_option,
+    _check_preload,
+    _get_stim_channel,
+    _on_missing,
+    _validate_type,
+    fill_doc,
+    legacy,
+    logger,
+    verbose,
+    warn,
+)
+
+
+def _get_meg_system(info):
+    """Educated guess for the helmet type based on channels."""
+    have_helmet = True
+    for ch in info["chs"]:
+        if ch["kind"] == FIFF.FIFFV_MEG_CH:
+            # Only take first 16 bits, as higher bits store CTF grad comp order
+            coil_type = ch["coil_type"] & 0xFFFF
+            nmag = np.sum([c["kind"] == FIFF.FIFFV_MEG_CH for c in info["chs"]])
+            if coil_type == FIFF.FIFFV_COIL_NM_122:
+                system = "122m"
+                break
+            elif coil_type // 1000 == 3:  # All Vectorview coils are 30xx
+                system = "306m"
+                break
+            elif (
+                coil_type == FIFF.FIFFV_COIL_MAGNES_MAG
+                or coil_type == FIFF.FIFFV_COIL_MAGNES_GRAD
+            ):
+                system = "Magnes_3600wh" if nmag > 150 else "Magnes_2500wh"
+                break
+            elif coil_type == FIFF.FIFFV_COIL_CTF_GRAD:
+                system = "CTF_275"
+                break
+            elif coil_type == FIFF.FIFFV_COIL_KIT_GRAD:
+                system = "KIT"
+                # Our helmet does not match very well, so let's just create it
+                have_helmet = False
+                break
+            elif coil_type == FIFF.FIFFV_COIL_BABY_GRAD:
+                system = "BabySQUID"
+                break
+            elif coil_type == FIFF.FIFFV_COIL_ARTEMIS123_GRAD:
+                system = "ARTEMIS123"
+                have_helmet = False
+                break
+            elif coil_type == FIFF.FIFFV_COIL_KERNEL_OPM_MAG_GEN1:
+                system = "Kernel_Flux"
+                have_helmet = True
+                break
+    else:
+        system = "unknown"
+        have_helmet = False
+    return system, have_helmet
+
+
+@verbose
+def equalize_channels(instances, copy=True, verbose=None):
+    """Equalize channel picks and ordering across multiple MNE-Python objects.
+
+    First, all channels that are not common to each object are dropped. Then,
+    using the first object in the list as a template, the channels of each
+    object are re-ordered to match the template. The end result is that all
+    given objects define the same channels, in the same order.
+
+    Parameters
+    ----------
+    instances : list
+        A list of MNE-Python objects to equalize the channels for. Objects can
+        be of type Raw, Epochs, Evoked, AverageTFR, Forward, Covariance,
+        CrossSpectralDensity or Info.
+    copy : bool
+        When dropping and/or re-ordering channels, an object will be copied
+        when this parameter is set to ``True``. When set to ``False`` (the
+        default) the dropping and re-ordering of channels happens in-place.
+
+        .. versionadded:: 0.20.0
+    %(verbose)s
+
+    Returns
+    -------
+    equalized_instances : list
+        A list of MNE-Python objects that have the same channels defined in the
+        same order.
+
+    See Also
+    --------
+    mne.channels.unify_bad_channels
+    mne.channels.rename_channels
+    mne.channels.combine_channels
+    """
+    from ..cov import Covariance
+    from ..epochs import BaseEpochs
+    from ..evoked import Evoked
+    from ..forward import Forward
+    from ..io import BaseRaw
+    from ..time_frequency import BaseTFR, CrossSpectralDensity
+
+    # Instances need to have a `ch_names` attribute and a `pick_channels`
+    # method that supports `ordered=True`.
+    allowed_types = (
+        BaseRaw,
+        BaseEpochs,
+        Evoked,
+        BaseTFR,
+        Forward,
+        Covariance,
+        CrossS
+<output_tail>
+emporal lobes. Here we switch the sides for these outliers. For other
+    # lobes it is not a big problem because of the vicinity of the lobes.
+    with np.errstate(invalid="ignore"):  # invalid division, greater compare
+        zs = np.abs(zscore(x[rt]))
+        outliers = np.array(rt)[np.where(zs > 2.0)[0]]
+    rt = list(np.setdiff1d(rt, outliers))
+
+    with np.errstate(invalid="ignore"):  # invalid division, greater compare
+        zs = np.abs(zscore(x[lt]))
+        outliers = np.append(outliers, (np.array(lt)[np.where(zs > 2.0)[0]]))
+    lt = list(np.setdiff1d(lt, outliers))
+
+    l_mean = np.mean(x[lt])
+    r_mean = np.mean(x[rt])
+    for outlier in outliers:
+        if abs(l_mean - x[outlier]) < abs(r_mean - x[outlier]):
+            lt.append(outlier)
+        else:
+            rt.append(outlier)
+
+    if add_stim:
+        stim_ch = _get_stim_channel(None, info, raise_error=False)
+        if len(stim_ch) > 0:
+            for region in [lf, rf, lo, ro, lp, rp, lt, rt]:
+                region.append(info["ch_names"].index(stim_ch[0]))
+    return OrderedDict(
+        [
+            ("Left-frontal", lf),
+            ("Right-frontal", rf),
+            ("Left-parietal", lp),
+            ("Right-parietal", rp),
+            ("Left-occipital", lo),
+            ("Right-occipital", ro),
+            ("Left-temporal", lt),
+            ("Right-temporal", rt),
+        ]
+    )
+
+
+def _divide_side(lobe, x):
+    """Make a separation between left and right lobe evenly."""
+    lobe = np.asarray(lobe)
+    median = np.median(x[lobe])
+
+    left = lobe[np.where(x[lobe] < median)[0]]
+    right = lobe[np.where(x[lobe] > median)[0]]
+    medians = np.where(x[lobe] == median)[0]
+
+    left = np.sort(np.concatenate([left, lobe[medians[1::2]]]))
+    right = np.sort(np.concatenate([right, lobe[medians[::2]]]))
+    return list(left), list(right)
+
+
+@verbose
+def read_vectorview_selection(name, fname=None, info=None, verbose=None):
+    """Read Neuromag Vector View channel selection from a file.
+
+    Parameters
+    ----------
+    name : str | list of str
+        Name of the selection. If a list, the selections are combined.
+        Supported selections are: ``'Vertex'``, ``'Left-temporal'``,
+        ``'Right-temporal'``, ``'Left-parietal'``, ``'Right-parietal'``,
+        ``'Left-occipital'``, ``'Right-occipital'``, ``'Left-frontal'`` and
+        ``'Right-frontal'``. Selections can also be matched and combined by
+        spcecifying common substrings. For example, ``name='temporal`` will
+        produce a combination of ``'Left-temporal'`` and ``'Right-temporal'``.
+    fname : path-like
+        Filename of the selection file (if ``None``, built-in selections are
+        used).
+    %(info)s Used to determine which channel naming convention to use, e.g.
+        ``'MEG 0111'`` (with space) for old Neuromag systems and ``'MEG0111'``
+        (without space) for new ones.
+    %(verbose)s
+
+    Returns
+    -------
+    sel : list of str
+        List with channel names in the selection.
+    """
+    # convert name to list of string
+    if not isinstance(name, list | tuple):
+        name = [name]
+    if isinstance(info, Info):
+        picks = pick_types(info, meg=True, exclude=())
+        if len(picks) > 0 and " " not in info["ch_names"][picks[0]]:
+            spacing = "new"
+        else:
+            spacing = "old"
+    elif info is not None:
+        raise TypeError(f"info must be an instance of Info or None, not {type(info)}")
+    else:  # info is None
+        spacing = "old"
+
+    # use built-in selections by default
+    if fname is None:
+        fname = op.join(op.dirname(__file__), "..", "data", "mne_analyze.sel")
+
+    fname = str(_check_fname(fname, must_exist=True, overwrite="read"))
+
+    # use this to make sure we find at least one match for each name
+    name_found = {n: False for n in name}
+    with open(fname) as fid:
+        sel = []
+        for line in fid:
+            line = line.strip()
+            # skip blank lines and comments
+            if len(line) == 0 or line[0] == "#":
+                continue
+            # get the name of the selection in the file
+            pos = line.find(":")
+            if pos < 0:
+                logger.info('":" delimiter not found in selections file, skipping line')
+                continue
+            sel_name_file = line[:pos]
+            # search for substring match with name provided
+            for n in name:
+                if sel_name_file.find(n) >= 0:
+                    sel.extend(line[pos + 1 :].split("|"))
+                    name_found[n] = True
+                    break
+
+    # make sure we found at least one match for each name
+    for n, found in name_found.items():
+        if not found:
+            raise ValueError(f'No match for selection name "{n}" found')
+
+    # make the selection a sorted list with unique elements
+    sel = list(set(sel))
+    sel.sort()
+    if spacing == "new":  # "new" or "old" by now, "old" is default
+        sel = [s.replace("MEG ", "MEG") for s in sel]
+    return sel
+
+<elided_chars>
+72832
+<warning>
+Output too long.
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 2, $0.00):
+```
+grep -n "grand_average" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py
+```
+
+Tool:
+<returncode>
+1
+<output>
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 3, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+grep -rn "grand_average" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/
+```
+
+Tool:
+<returncode>
+1
+<output>
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 4, $0.01):
+   
+
+```
+grep -n "BaseSpectrum" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+245:    from ..time_frequency.spectrum import BaseSpectrum
+254:    valid_types = (BaseRaw, Epochs, Evoked, BaseSpectrum)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 5, $0.01):
+   
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '230,300p'
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+   230      See Also
+   231      --------
+   232      mne.channels.equalize_channels
+   233      mne.channels.rename_channels
+   234      mne.channels.combine_channels
+   235  
+   236      Notes
+   237      -----
+   238      This function modifies the instances in-place.
+   239  
+   240      .. versionadded:: 1.6
+   241      """
+   242      from ..epochs import Epochs
+   243      from ..evoked import Evoked
+   244      from ..io import BaseRaw
+   245      from ..time_frequency.spectrum import BaseSpectrum
+   246  
+   247      # ensure input is list-like
+   248      _validate_type(insts, (list, tuple), "insts")
+   249      # ensure non-empty
+   250      if len(insts) == 0:
+   251          raise ValueError("insts must not be empty")
+   252      # ensure all insts are MNE objects, and all the same type
+   253      inst_type = type(insts[0])
+   254      valid_types = (BaseRaw, Epochs, Evoked, BaseSpectrum)
+   255      for inst in insts:
+   256          _validate_type(inst, valid_types, "each object in insts")
+   257          if type(inst) is not inst_type:
+   258              raise ValueError("All insts must be the same type")
+   259  
+   260      # ensure all insts have the same channels and channel order
+   261      ch_names = insts[0].ch_names
+   262      for inst in insts[1:]:
+   263          dif = set(inst.ch_names) ^ set(ch_names)
+   264          if len(dif):
+   265              raise ValueError(
+   266                  "Channels do not match across the objects in insts. Consider calling "
+   267                  "equalize_channels before calling this function."
+   268              )
+   269          elif inst.ch_names != ch_names:
+   270              raise ValueError(
+   271                  "Channel names are sorted differently across instances. Please use "
+   272                  "mne.channels.equalize_channels."
+   273              )
+   274  
+   275      # collect bads as dict keys so that insertion order is preserved, then cast to list
+   276      all_bads = dict()
+   277      for inst in insts:
+   278          all_bads.update(dict.fromkeys(inst.info["bads"]))
+   279      all_bads = list(all_bads)
+   280  
+   281      # update bads on all instances
+   282      for inst in insts:
+   283          inst.info["bads"] = all_bads
+   284  
+   285      return insts
+   286  
+   287  
+   288  class ReferenceMixin(MontageMixin):
+   289      """Mixin class for Raw, Evoked, Epochs."""
+   290  
+   291      @verbose
+   292      def set_eeg_reference(
+   293          self,
+   294          ref_channels="average",
+   295          projection=False,
+   296          ch_type="auto",
+   297          forward=None,
+   298          *,
+   299          joint=False,
+   300          verbose=None,
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 6, $0.01):
+   
+
+```
+cd /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/ && git diff HEAD~1 -- channels.py 2>/dev/null || git log -1 --oneline
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+128
+<output>
+fatal: not a git repository (or any of the parent directories): .git
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 7, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+       
+
+```
+grep -n "combine_channels" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+143:    mne.channels.combine_channels
+234:    mne.channels.combine_channels
+1136:    mne.channels.combine_channels
+1995:def combine_channels(
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 8, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+           
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '1995,2150p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  1995  def combine_channels(
+  1996      inst, groups, method="mean", keep_stim=False, drop_bad=False, verbose=None
+  1997  ):
+  1998      """Combine channels based on specified channel grouping.
+  1999  
+  2000      Parameters
+  2001      ----------
+  2002      inst : instance of Raw, Epochs, or Evoked
+  2003          An MNE-Python object to combine the channels for. The object can be of
+  2004          type Raw, Epochs, or Evoked.
+  2005      groups : dict
+  2006          Specifies which channels are aggregated into a single channel, with
+  2007          aggregation method determined by the ``method`` parameter. One new
+  2008          pseudo-channel is made per dict entry; the dict values must be lists of
+  2009          picks (integer indices of ``ch_names``). For example::
+  2010  
+  2011              groups=dict(Left=[1, 2, 3, 4], Right=[5, 6, 7, 8])
+  2012  
+  2013          Note that within a dict entry all channels must have the same type.
+  2014      method : str | callable
+  2015          Which method to use to combine channels. If a :class:`str`, must be one
+  2016          of 'mean', 'median', or 'std' (standard deviation). If callable, the
+  2017          callable must accept one positional input (data of shape ``(n_channels,
+  2018          n_times)``, or ``(n_epochs, n_channels, n_times)``) and return an
+  2019          :class:`array <numpy.ndarray>` of shape ``(n_times,)``, or ``(n_epochs,
+  2020          n_times)``. For example with an instance of Raw or Evoked::
+  2021  
+  2022              method = lambda data: np.mean(data, axis=0)
+  2023  
+  2024          Another example with an instance of Epochs::
+  2025  
+  2026              method = lambda data: np.median(data, axis=1)
+  2027  
+  2028          Defaults to ``'mean'``.
+  2029      keep_stim : bool
+  2030          If ``True``, include stimulus channels in the resulting object.
+  2031          Defaults to ``False``.
+  2032      drop_bad : bool
+  2033          If ``True``, drop channels marked as bad before combining. Defaults to
+  2034          ``False``.
+  2035      %(verbose)s
+  2036  
+  2037      Returns
+  2038      -------
+  2039      combined_inst : instance of Raw, Epochs, or Evoked
+  2040          An MNE-Python object of the same type as the input ``inst``, containing
+  2041          one virtual channel for each group in ``groups`` (and, if ``keep_stim``
+  2042          is ``True``, also containing stimulus channels).
+  2043  
+  2044      See Also
+  2045      --------
+  2046      mne.channels.equalize_channels
+  2047      mne.channels.rename_channels
+  2048      mne.channels.unify_bad_channels
+  2049      """
+  2050      from ..epochs import BaseEpochs, EpochsArray
+  2051      from ..evoked import Evoked, EvokedArray
+  2052      from ..io import BaseRaw, RawArray
+  2053  
+  2054      ch_axis = 1 if isinstance(inst, BaseEpochs) else 0
+  2055      ch_idx = list(range(inst.info["nchan"]))
+  2056      ch_names = inst.info["ch_names"]
+  2057      ch_types = inst.get_channel_types()
+  2058      kwargs = dict()
+  2059      if isinstance(inst, BaseEpochs):
+  2060          kwargs["copy"] = False
+  2061      inst_data = inst.get_data(**kwargs)
+  2062      groups = OrderedDict(deepcopy(groups))
+  2063  
+  2064      # Convert string values of ``method`` into callables
+  2065      # XXX Possibly de-duplicate with _make_combine_callable of mne/viz/utils.py
+  2066      if isinstance(method, str):
+  2067          method_dict = {
+  2068              key: partial(getattr(np, key), axis=ch_axis)
+  2069              for key in ("mean", "median", "std")
+  2070          }
+  2071          try:
+  2072              method = method_dict[method]
+  2073          except KeyError:
+  2074              raise ValueError(
+  2075                  '"method" must be a callable, or one of "mean", '
+  2076                  f'"median", or "std"; got "{method}".'
+  2077              )
+  2078  
+  2079      # Instantiate channel info and data
+  2080      new_ch_names, new_ch_types, new_data = [], [], []
+  2081      if not isinstance(keep_stim, bool):
+  2082          raise TypeError(f'"keep_stim" must be of type bool, not {type(keep_stim)}.')
+  2083      if keep_stim:
+  2084          stim_ch_idx = list(pick_types(inst.info, meg=False, stim=True))
+  2085          if stim_ch_idx:
+  2086              new_ch_names = [ch_names[idx] for idx in stim_ch_idx]
+  2087              new_ch_types = [ch_types[idx] for idx in stim_ch_idx]
+  2088              new_data = [np.take(inst_data, idx, axis=ch_axis) for idx in stim_ch_idx]
+  2089          else:
+  2090              warn("Could not find stimulus channels.")
+  2091  
+  2092      # Get indices of bad channels
+  2093      ch_idx_bad = []
+  2094      if not isinstance(drop_bad, bool):
+  2095          raise TypeError(f'"drop_bad" must be of type bool, not {type(drop_bad)}.')
+  2096      if drop_bad and inst.info["bads"]:
+  2097          ch_idx_bad = pick_channels(ch_names, inst.info["bads"])
+  2098  
+  2099      # Check correctness of combinations
+  2100      for this_group, this_picks in groups.items():
+  2101          # Check if channel indices are out of bounds
+  2102          if not all(idx in ch_idx for idx in this_picks):
+  2103              raise ValueError("Some channel indices are out of bounds.")
+  2104          # Check if heterogeneous sensor type combinations
+  2105          this_ch_type = np.array(ch_types)[this_picks]
+  2106          if len(set(this_ch_type)) > 1:
+  2107              types = ", ".join(set(this_ch_type))
+  2108              raise ValueError(
+  2109                  "Cannot combine sensors of different types; "
+  2110                  f'"{this_group}" contains types {types}.'
+  2111              )
+  2112          # Remove bad channels
+  2113          these_bads = [idx for idx in this_picks if idx in ch_idx_bad]
+  2114          this_picks = [idx for idx in this_picks if idx not in ch_idx_bad]
+  2115          if these_bads:
+  2116              logger.info(
+  2117                  f"Dropped the following channels in group {this_group}: {these_bads}"
+  2118              )
+  2119          #  Check if combining less than 2 channel
+  2120          if len(set(this_picks)) < 2:
+  2121              warn(
+  2122                  f'Less than 2 channels in group "{this_group}" when '
+  2123                  f'combining by method "{method}".'
+  2124              )
+  2125          # If all good create more detailed dict without bad channels
+  2126          groups[this_group] = dict(picks=this_picks, ch_type=this_ch_type[0])
+  2127  
+  2128      # Combine channels and add them to the new instance
+  2129      for this_group, this_group_dict in groups.items():
+  2130          new_ch_names.append(this_group)
+  2131          new_ch_types.append(this_group_dict["ch_type"])
+  2132          this_picks = this_group_dict["picks"]
+  2133          this_data = np.take(inst_data, this_picks, axis=ch_axis)
+  2134          new_data.append(method(this_data))
+  2135      new_data = np.swapaxes(new_data, 0, ch_axis)
+  2136      info = create_info(
+  2137          sfreq=inst.info["sfreq"], ch_names=new_ch_names, ch_types=new_ch_types
+  2138      )
+  2139      # create new instances and make sure to copy important attributes
+  2140      if isinstance(inst, BaseRaw):
+  2141          combined_inst = RawArray(new_data, info, first_samp=inst.first_samp)
+  2142      elif isinstance(inst, BaseEpochs):
+  2143          combined_inst = EpochsArray(
+  2144              new_data,
+  2145              info,
+  2146              events=inst.events,
+  2147              event_id=inst.event_id,
+  2148              tmin=inst.times[0],
+  2149              baseline=inst.baseline,
+  2150          )
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 9, $0.02):
+               
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '2150,2180p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  2150          )
+  2151          if inst.metadata is not None:
+  2152              combined_inst.metadata = inst.metadata.copy()
+  2153      elif isinstance(inst, Evoked):
+  2154          combined_inst = EvokedArray(
+  2155              new_data, info, tmin=inst.times[0], baseline=inst.baseline
+  2156          )
+  2157  
+  2158      return combined_inst
+  2159  
+  2160  
+  2161  # NeuroMag channel groupings
+  2162  _SELECTIONS = [
+  2163      "Vertex",
+  2164      "Left-temporal",
+  2165      "Right-temporal",
+  2166      "Left-parietal",
+  2167      "Right-parietal",
+  2168      "Left-occipital",
+  2169      "Right-occipital",
+  2170      "Left-frontal",
+  2171      "Right-frontal",
+  2172  ]
+  2173  _EEG_SELECTIONS = ["EEG 1-32", "EEG 33-64", "EEG 65-96", "EEG 97-128"]
+  2174  
+  2175  
+  2176  def _divide_to_regions(info, add_stim=True):
+  2177      """Divide channels to regions by positions."""
+  2178      picks = _pick_data_channels(info, exclude=[])
+  2179      chs_in_lobe = len(picks) // 4
+  2180      pos = np.array([ch["loc"][:3] for ch in info["chs"]])
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 10, $0.02):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+ Let me look more closely at the code around line 245 and how BaseSpectrum is imported and used:   
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '200,280p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   200                  reordered = True
+   201          equalized_instances.append(inst)
+   202  
+   203      if dropped:
+   204          logger.info(f"Dropped the following channels:\n{dropped}")
+   205      elif reordered:
+   206          logger.info("Channels have been re-ordered.")
+   207  
+   208      return equalized_instances
+   209  
+   210  
+   211  def unify_bad_channels(insts):
+   212      """Unify bad channels across a list of instances.
+   213  
+   214      All instances must be of the same type and have matching channel names and channel
+   215      order. The ``.info["bads"]`` of each instance will be set to the union of
+   216      ``.info["bads"]`` across all instances.
+   217  
+   218      Parameters
+   219      ----------
+   220      insts : list
+   221          List of instances (:class:`~mne.io.Raw`, :class:`~mne.Epochs`,
+   222          :class:`~mne.Evoked`, :class:`~mne.time_frequency.Spectrum`,
+   223          :class:`~mne.time_frequency.EpochsSpectrum`) across which to unify bad channels.
+   224  
+   225      Returns
+   226      -------
+   227      insts : list
+   228          List of instances with bad channels unified across instances.
+   229  
+   230      See Also
+   231      --------
+   232      mne.channels.equalize_channels
+   233      mne.channels.rename_channels
+   234      mne.channels.combine_channels
+   235  
+   236      Notes
+   237      -----
+   238      This function modifies the instances in-place.
+   239  
+   240      .. versionadded:: 1.6
+   241      """
+   242      from ..epochs import Epochs
+   243      from ..evoked import Evoked
+   244      from ..io import BaseRaw
+   245      from ..time_frequency.spectrum import BaseSpectrum
+   246  
+   247      # ensure input is list-like
+   248      _validate_type(insts, (list, tuple), "insts")
+   249      # ensure non-empty
+   250      if len(insts) == 0:
+   251          raise ValueError("insts must not be empty")
+   252      # ensure all insts are MNE objects, and all the same type
+   253      inst_type = type(insts[0])
+   254      valid_types = (BaseRaw, Epochs, Evoked, BaseSpectrum)
+   255      for inst in insts:
+   256          _validate_type(inst, valid_types, "each object in insts")
+   257          if type(inst) is not inst_type:
+   258              raise ValueError("All insts must be the same type")
+   259  
+   260      # ensure all insts have the same channels and channel order
+   261      ch_names = insts[0].ch_names
+   262      for inst in insts[1:]:
+   263          dif = set(inst.ch_names) ^ set(ch_names)
+   264          if len(dif):
+   265              raise ValueError(
+   266                  "Channels do not match across the objects in insts. Consider calling "
+   267                  "equalize_channels before calling this function."
+   268              )
+   269          elif inst.ch_names != ch_names:
+   270              raise ValueError(
+   271                  "Channel names are sorted differently across instances. Please use "
+   272                  "mne.channels.equalize_channels."
+   273              )
+   274  
+   275      # collect bads as dict keys so that insertion order is preserved, then cast to list
+   276      all_bads = dict()
+   277      for inst in insts:
+   278          all_bads.update(dict.fromkeys(inst.info["bads"]))
+   279      all_bads = list(all_bads)
+   280  
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 11, $0.02):
+           
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '280,320p'
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+   280  
+   281      # update bads on all instances
+   282      for inst in insts:
+   283          inst.info["bads"] = all_bads
+   284  
+   285      return insts
+   286  
+   287  
+   288  class ReferenceMixin(MontageMixin):
+   289      """Mixin class for Raw, Evoked, Epochs."""
+   290  
+   291      @verbose
+   292      def set_eeg_reference(
+   293          self,
+   294          ref_channels="average",
+   295          projection=False,
+   296          ch_type="auto",
+   297          forward=None,
+   298          *,
+   299          joint=False,
+   300          verbose=None,
+   301      ):
+   302          """Specify which reference to use for EEG data.
+   303  
+   304          Use this function to explicitly specify the desired reference for EEG.
+   305          This can be either an existing electrode or a new virtual channel.
+   306          This function will re-reference the data according to the desired
+   307          reference.
+   308  
+   309          Parameters
+   310          ----------
+   311          %(ref_channels_set_eeg_reference)s
+   312          %(projection_set_eeg_reference)s
+   313          %(ch_type_set_eeg_reference)s
+   314          %(forward_set_eeg_reference)s
+   315          %(joint_set_eeg_reference)s
+   316          %(verbose)s
+   317  
+   318          Returns
+   319          -------
+   320          inst : instance of Raw | Epochs | Evoked
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 12, $0.02):
+  Let me search for potential issues related to frequency handling or spectrum:      
+
+```
+grep -n "freq" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+150:    from ..time_frequency import BaseTFR, CrossSpectralDensity
+222:        :class:`~mne.Evoked`, :class:`~mne.time_frequency.Spectrum`,
+223:        :class:`~mne.time_frequency.EpochsSpectrum`) across which to unify bad channels.
+245:    from ..time_frequency.spectrum import BaseSpectrum
+707:        from ..time_frequency import EpochsTFR
+1034:        sfreq = self.info["sfreq"]
+1037:            sfreq=sfreq,
+2137:        sfreq=inst.info["sfreq"], ch_names=new_ch_names, ch_types=new_ch_types
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 13, $0.03):
+            
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '140,210p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   140      --------
+   141      mne.channels.unify_bad_channels
+   142      mne.channels.rename_channels
+   143      mne.channels.combine_channels
+   144      """
+   145      from ..cov import Covariance
+   146      from ..epochs import BaseEpochs
+   147      from ..evoked import Evoked
+   148      from ..forward import Forward
+   149      from ..io import BaseRaw
+   150      from ..time_frequency import BaseTFR, CrossSpectralDensity
+   151  
+   152      # Instances need to have a `ch_names` attribute and a `pick_channels`
+   153      # method that supports `ordered=True`.
+   154      allowed_types = (
+   155          BaseRaw,
+   156          BaseEpochs,
+   157          Evoked,
+   158          BaseTFR,
+   159          Forward,
+   160          Covariance,
+   161          CrossSpectralDensity,
+   162          Info,
+   163      )
+   164      allowed_types_str = (
+   165          "Raw, Epochs, Evoked, TFR, Forward, Covariance, CrossSpectralDensity or Info"
+   166      )
+   167      for inst in instances:
+   168          _validate_type(
+   169              inst, allowed_types, "Instances to be modified", allowed_types_str
+   170          )
+   171  
+   172      chan_template = instances[0].ch_names
+   173      logger.info("Identifying common channels ...")
+   174      channels = [set(inst.ch_names) for inst in instances]
+   175      common_channels = set(chan_template).intersection(*channels)
+   176      all_channels = set(chan_template).union(*channels)
+   177      dropped = list(set(all_channels - common_channels))
+   178  
+   179      # Preserve the order of chan_template
+   180      order = np.argsort([chan_template.index(ch) for ch in common_channels])
+   181      common_channels = np.array(list(common_channels))[order].tolist()
+   182  
+   183      # Update all instances to match the common_channels list
+   184      reordered = False
+   185      equalized_instances = []
+   186      for inst in instances:
+   187          # Only perform picking when needed
+   188          if inst.ch_names != common_channels:
+   189              if isinstance(inst, Info):
+   190                  sel = pick_channels(
+   191                      inst.ch_names, common_channels, exclude=[], ordered=True
+   192                  )
+   193                  inst = pick_info(inst, sel, copy=copy, verbose=False)
+   194              else:
+   195                  if copy:
+   196                      inst = inst.copy()
+   197                  # TODO change to .pick() once CSD, Cov, and Fwd have `.pick()` methods
+   198                  inst.pick_channels(common_channels, ordered=True)
+   199              if len(inst.ch_names) == len(common_channels):
+   200                  reordered = True
+   201          equalized_instances.append(inst)
+   202  
+   203      if dropped:
+   204          logger.info(f"Dropped the following channels:\n{dropped}")
+   205      elif reordered:
+   206          logger.info("Channels have been re-ordered.")
+   207  
+   208      return equalized_instances
+   209  
+   210  
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 14, $0.03):
+  Let me search for any existing implementation or tests that might give clues about the expected behavior:        
+
+```
+grep -rn "unify_bad_channels" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/
+```
+
+Tool:
+<returncode>
+0
+<output>
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py:141:    mne.channels.unify_bad_channels
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py:211:def unify_bad_channels(insts):
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py:1135:    mne.channels.unify_bad_channels
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py:2048:    mne.channels.unify_bad_channels
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 15, $0.03):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+               
+
+```
+grep -rn "grand_average" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/
+```
+
+Tool:
+<returncode>
+2
+<output>
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.syncdefaultsd/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.transparencyd/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.triald/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.ap.promotedcontentd/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.desktopservices.ArchiveService/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.appstoreagent/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.imtransferservices.IMTransferAgent/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.parsec-fbf/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.tipsd/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.fileproviderd/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.passd/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.chrono/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.calaccessd/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/duetexpertd/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.parsecd/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.identityservicesd/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.sharingd/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.bluetoothuserd/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.bird/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/homed/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.quicklook.ThumbnailsAgent/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/net.whatsapp.WhatsApp.ServiceExtension/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.pluginkit/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.donotdisturbd/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.imagent/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/MSau_76384/Microsoft_AutoUpdate_4.76.24101387_Updater.pkg: Permission denied
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.imdpersistence.IMDPersistenceAgent/TemporaryItems: Operation not permitted
+grep: /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/com.apple.icloud.searchpartyuseragent/TemporaryItems: Operation not permitted
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 16, $0.03):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+           
+
+```
+ls -la /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/
+```
+
+Tool:
+<returncode>
+0
+<output>
+total 168
+drwx------    3 user  staff     96 May  2 03:31 .
+drwx------@ 174 user  staff   5568 May  2 03:31 ..
+-rw-r--r--    1 user  staff  82836 May  2 03:31 channels.py
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 17, $0.04):
+   Let me look at the structure of the channels.py file more carefully and see if there are any issues with BaseSpectrum support:           
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '101,160p'
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+   101                  system = "Kernel_Flux"
+   102                  have_helmet = True
+   103                  break
+   104      else:
+   105          system = "unknown"
+   106          have_helmet = False
+   107      return system, have_helmet
+   108  
+   109  
+   110  @verbose
+   111  def equalize_channels(instances, copy=True, verbose=None):
+   112      """Equalize channel picks and ordering across multiple MNE-Python objects.
+   113  
+   114      First, all channels that are not common to each object are dropped. Then,
+   115      using the first object in the list as a template, the channels of each
+   116      object are re-ordered to match the template. The end result is that all
+   117      given objects define the same channels, in the same order.
+   118  
+   119      Parameters
+   120      ----------
+   121      instances : list
+   122          A list of MNE-Python objects to equalize the channels for. Objects can
+   123          be of type Raw, Epochs, Evoked, AverageTFR, Forward, Covariance,
+   124          CrossSpectralDensity or Info.
+   125      copy : bool
+   126          When dropping and/or re-ordering channels, an object will be copied
+   127          when this parameter is set to ``True``. When set to ``False`` (the
+   128          default) the dropping and re-ordering of channels happens in-place.
+   129  
+   130          .. versionadded:: 0.20.0
+   131      %(verbose)s
+   132  
+   133      Returns
+   134      -------
+   135      equalized_instances : list
+   136          A list of MNE-Python objects that have the same channels defined in the
+   137          same order.
+   138  
+   139      See Also
+   140      --------
+   141      mne.channels.unify_bad_channels
+   142      mne.channels.rename_channels
+   143      mne.channels.combine_channels
+   144      """
+   145      from ..cov import Covariance
+   146      from ..epochs import BaseEpochs
+   147      from ..evoked import Evoked
+   148      from ..forward import Forward
+   149      from ..io import BaseRaw
+   150      from ..time_frequency import BaseTFR, CrossSpectralDensity
+   151  
+   152      # Instances need to have a `ch_names` attribute and a `pick_channels`
+   153      # method that supports `ordered=True`.
+   154      allowed_types = (
+   155          BaseRaw,
+   156          BaseEpochs,
+   157          Evoked,
+   158          BaseTFR,
+   159          Forward,
+   160          Covariance,
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 18, $0.04):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+              Let me look at the complete `combine_channels` function:                
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '2130,2160p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  2130          new_ch_names.append(this_group)
+  2131          new_ch_types.append(this_group_dict["ch_type"])
+  2132          this_picks = this_group_dict["picks"]
+  2133          this_data = np.take(inst_data, this_picks, axis=ch_axis)
+  2134          new_data.append(method(this_data))
+  2135      new_data = np.swapaxes(new_data, 0, ch_axis)
+  2136      info = create_info(
+  2137          sfreq=inst.info["sfreq"], ch_names=new_ch_names, ch_types=new_ch_types
+  2138      )
+  2139      # create new instances and make sure to copy important attributes
+  2140      if isinstance(inst, BaseRaw):
+  2141          combined_inst = RawArray(new_data, info, first_samp=inst.first_samp)
+  2142      elif isinstance(inst, BaseEpochs):
+  2143          combined_inst = EpochsArray(
+  2144              new_data,
+  2145              info,
+  2146              events=inst.events,
+  2147              event_id=inst.event_id,
+  2148              tmin=inst.times[0],
+  2149              baseline=inst.baseline,
+  2150          )
+  2151          if inst.metadata is not None:
+  2152              combined_inst.metadata = inst.metadata.copy()
+  2153      elif isinstance(inst, Evoked):
+  2154          combined_inst = EvokedArray(
+  2155              new_data, info, tmin=inst.times[0], baseline=inst.baseline
+  2156          )
+  2157  
+  2158      return combined_inst
+  2159  
+  2160  
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 19, $0.05):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+   Let me look at the full code of `unify_bad_channels` again and check for any issues:              
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '242,260p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   242      from ..epochs import Epochs
+   243      from ..evoked import Evoked
+   244      from ..io import BaseRaw
+   245      from ..time_frequency.spectrum import BaseSpectrum
+   246  
+   247      # ensure input is list-like
+   248      _validate_type(insts, (list, tuple), "insts")
+   249      # ensure non-empty
+   250      if len(insts) == 0:
+   251          raise ValueError("insts must not be empty")
+   252      # ensure all insts are MNE objects, and all the same type
+   253      inst_type = type(insts[0])
+   254      valid_types = (BaseRaw, Epochs, Evoked, BaseSpectrum)
+   255      for inst in insts:
+   256          _validate_type(inst, valid_types, "each object in insts")
+   257          if type(inst) is not inst_type:
+   258              raise ValueError("All insts must be the same type")
+   259  
+   260      # ensure all insts have the same channels and channel order
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 20, $0.05):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+              Let me look at function documentation and see if there are any clear inconsistencies:                   
+
+```
+grep -A5 "BaseTFR" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | head -30
+```
+
+Tool:
+<returncode>
+0
+<output>
+    from ..time_frequency import BaseTFR, CrossSpectralDensity
+
+    # Instances need to have a `ch_names` attribute and a `pick_channels`
+    # method that supports `ordered=True`.
+    allowed_types = (
+        BaseRaw,
+--
+        BaseTFR,
+        Forward,
+        Covariance,
+        CrossSpectralDensity,
+        Info,
+    )
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 21, $0.06):
+                   
+
+```
+cd /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/ && python3 -c "import ast; ast.parse(open('channels.py').read())"
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 22, $0.06):
+               Let me examine whether the `equalize_channels` function needs to support `BaseSpectrum`:                   
+
+```
+grep -n "BaseTFR\|BaseSpectrum" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+150:    from ..time_frequency import BaseTFR, CrossSpectralDensity
+158:        BaseTFR,
+245:    from ..time_frequency.spectrum import BaseSpectrum
+254:    valid_types = (BaseRaw, Epochs, Evoked, BaseSpectrum)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 23, $0.06):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+                   
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '120,128p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   120      ----------
+   121      instances : list
+   122          A list of MNE-Python objects to equalize the channels for. Objects can
+   123          be of type Raw, Epochs, Evoked, AverageTFR, Forward, Covariance,
+   124          CrossSpectralDensity or Info.
+   125      copy : bool
+   126          When dropping and/or re-ordering channels, an object will be copied
+   127          when this parameter is set to ``True``. When set to ``False`` (the
+   128          default) the dropping and re-ordering of channels happens in-place.
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 24, $0.07):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+                     Let me try to run a quick import check to see if the imports work:     
+
+```
+python3 -c "
+try:
+    from mne.time_frequency import BaseTFR
+    print('BaseTFR imported from mne.time_frequency')
+except Exception as e:
+    print(f'BaseTFR import error: {e}')
+try:
+    from mne.time_frequency.spectrum import BaseSpectrum
+    print('BaseSpectrum imported from mne.time_frequency.spectrum')
+except Exception as e:
+    print(f'BaseSpectrum import error: {e}')
+"
+```
+
+Tool:
+<returncode>
+0
+<output>
+BaseTFR import error: No module named 'mne'
+BaseSpectrum import error: No module named 'mne'
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 25, $0.07):
+   Based on my analysis, the bug is that `equalize_channels` doesn't support `BaseSpectrum` objects while `unify_bad_channels` does. This inconsistency means that users can't equalize channels for spectrum objects even though they can unify 
+bad channels for them.
+
+Let me fix the `equalize_channels` function to also support `BaseSpectrum`:   
+
+```
+sed -i '' 's/from ..time_frequency import BaseTFR, CrossSpectralDensity/from ..time_frequency import BaseTFR, CrossSpectralDensity\n    from ..time_frequency.spectrum import BaseSpectrum/' 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 26, $0.07):
+   
+
+```
+sed -i '' 's/allowed_types = ($/allowed_types = (/' /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py && sed -i '' 's/BaseTFR,$/BaseTFR,\n        BaseSpectrum,/' 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 27, $0.07):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+       
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '145,175p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   145      from ..cov import Covariance
+   146      from ..epochs import BaseEpochs
+   147      from ..evoked import Evoked
+   148      from ..forward import Forward
+   149      from ..io import BaseRaw
+   150      from ..time_frequency import BaseTFR, CrossSpectralDensity
+   151      from ..time_frequency.spectrum import BaseSpectrum
+   152  
+   153      # Instances need to have a `ch_names` attribute and a `pick_channels`
+   154      # method that supports `ordered=True`.
+   155      allowed_types = (
+   156          BaseRaw,
+   157          BaseEpochs,
+   158          Evoked,
+   159          BaseTFR,
+   160          BaseSpectrum,
+   161          Forward,
+   162          Covariance,
+   163          CrossSpectralDensity,
+   164          Info,
+   165      )
+   166      allowed_types_str = (
+   167          "Raw, Epochs, Evoked, TFR, Forward, Covariance, CrossSpectralDensity or Info"
+   168      )
+   169      for inst in instances:
+   170          _validate_type(
+   171              inst, allowed_types, "Instances to be modified", allowed_types_str
+   172          )
+   173  
+   174      chan_template = instances[0].ch_names
+   175      logger.info("Identifying common channels ...")
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 28, $0.08):
+          
+
+```
+sed -i '' 's/"Raw, Epochs, Evoked, TFR, Forward, Covariance, CrossSpectralDensity or Info"/"Raw, Epochs, Evoked, TFR, Spectrum, Forward, Covariance, CrossSpectralDensity or Info"/' 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 29, $0.08):
+             
+
+```
+sed -i '' 's/be of type Raw, Epochs, Evoked, AverageTFR, Forward, Covariance,/be of type Raw, Epochs, Evoked, AverageTFR, Spectrum, Forward, Covariance,/' /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 30, $0.08):
+                 
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '120,170p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   120      ----------
+   121      instances : list
+   122          A list of MNE-Python objects to equalize the channels for. Objects can
+   123          be of type Raw, Epochs, Evoked, AverageTFR, Spectrum, Forward, Covariance,
+   124          CrossSpectralDensity or Info.
+   125      copy : bool
+   126          When dropping and/or re-ordering channels, an object will be copied
+   127          when this parameter is set to ``True``. When set to ``False`` (the
+   128          default) the dropping and re-ordering of channels happens in-place.
+   129  
+   130          .. versionadded:: 0.20.0
+   131      %(verbose)s
+   132  
+   133      Returns
+   134      -------
+   135      equalized_instances : list
+   136          A list of MNE-Python objects that have the same channels defined in the
+   137          same order.
+   138  
+   139      See Also
+   140      --------
+   141      mne.channels.unify_bad_channels
+   142      mne.channels.rename_channels
+   143      mne.channels.combine_channels
+   144      """
+   145      from ..cov import Covariance
+   146      from ..epochs import BaseEpochs
+   147      from ..evoked import Evoked
+   148      from ..forward import Forward
+   149      from ..io import BaseRaw
+   150      from ..time_frequency import BaseTFR, CrossSpectralDensity
+   151      from ..time_frequency.spectrum import BaseSpectrum
+   152  
+   153      # Instances need to have a `ch_names` attribute and a `pick_channels`
+   154      # method that supports `ordered=True`.
+   155      allowed_types = (
+   156          BaseRaw,
+   157          BaseEpochs,
+   158          Evoked,
+   159          BaseTFR,
+   160          BaseSpectrum,
+   161          Forward,
+   162          Covariance,
+   163          CrossSpectralDensity,
+   164          Info,
+   165      )
+   166      allowed_types_str = (
+   167          "Raw, Epochs, Evoked, TFR, Spectrum, Forward, Covariance, CrossSpectralDensity or Info"
+   168      )
+   169      for inst in instances:
+   170          _validate_type(
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 31, $0.09):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+    Let me also check if `combine_channels` needs similar updates:               
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '2048,2160p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  2048      mne.channels.equalize_channels
+  2049      mne.channels.rename_channels
+  2050      mne.channels.unify_bad_channels
+  2051      """
+  2052      from ..epochs import BaseEpochs, EpochsArray
+  2053      from ..evoked import Evoked, EvokedArray
+  2054      from ..io import BaseRaw, RawArray
+  2055  
+  2056      ch_axis = 1 if isinstance(inst, BaseEpochs) else 0
+  2057      ch_idx = list(range(inst.info["nchan"]))
+  2058      ch_names = inst.info["ch_names"]
+  2059      ch_types = inst.get_channel_types()
+  2060      kwargs = dict()
+  2061      if isinstance(inst, BaseEpochs):
+  2062          kwargs["copy"] = False
+  2063      inst_data = inst.get_data(**kwargs)
+  2064      groups = OrderedDict(deepcopy(groups))
+  2065  
+  2066      # Convert string values of ``method`` into callables
+  2067      # XXX Possibly de-duplicate with _make_combine_callable of mne/viz/utils.py
+  2068      if isinstance(method, str):
+  2069          method_dict = {
+  2070              key: partial(getattr(np, key), axis=ch_axis)
+  2071              for key in ("mean", "median", "std")
+  2072          }
+  2073          try:
+  2074              method = method_dict[method]
+  2075          except KeyError:
+  2076              raise ValueError(
+  2077                  '"method" must be a callable, or one of "mean", '
+  2078                  f'"median", or "std"; got "{method}".'
+  2079              )
+  2080  
+  2081      # Instantiate channel info and data
+  2082      new_ch_names, new_ch_types, new_data = [], [], []
+  2083      if not isinstance(keep_stim, bool):
+  2084          raise TypeError(f'"keep_stim" must be of type bool, not {type(keep_stim)}.')
+  2085      if keep_stim:
+  2086          stim_ch_idx = list(pick_types(inst.info, meg=False, stim=True))
+  2087          if stim_ch_idx:
+  2088              new_ch_names = [ch_names[idx] for idx in stim_ch_idx]
+  2089              new_ch_types = [ch_types[idx] for idx in stim_ch_idx]
+  2090              new_data = [np.take(inst_data, idx, axis=ch_axis) for idx in stim_ch_idx]
+  2091          else:
+  2092              warn("Could not find stimulus channels.")
+  2093  
+  2094      # Get indices of bad channels
+  2095      ch_idx_bad = []
+  2096      if not isinstance(drop_bad, bool):
+  2097          raise TypeError(f'"drop_bad" must be of type bool, not {type(drop_bad)}.')
+  2098      if drop_bad and inst.info["bads"]:
+  2099          ch_idx_bad = pick_channels(ch_names, inst.info["bads"])
+  2100  
+  2101      # Check correctness of combinations
+  2102      for this_group, this_picks in groups.items():
+  2103          # Check if channel indices are out of bounds
+  2104          if not all(idx in ch_idx for idx in this_picks):
+  2105              raise ValueError("Some channel indices are out of bounds.")
+  2106          # Check if heterogeneous sensor type combinations
+  2107          this_ch_type = np.array(ch_types)[this_picks]
+  2108          if len(set(this_ch_type)) > 1:
+  2109              types = ", ".join(set(this_ch_type))
+  2110              raise ValueError(
+  2111                  "Cannot combine sensors of different types; "
+  2112                  f'"{this_group}" contains types {types}.'
+  2113              )
+  2114          # Remove bad channels
+  2115          these_bads = [idx for idx in this_picks if idx in ch_idx_bad]
+  2116          this_picks = [idx for idx in this_picks if idx not in ch_idx_bad]
+  2117          if these_bads:
+  2118              logger.info(
+  2119                  f"Dropped the following channels in group {this_group}: {these_bads}"
+  2120              )
+  2121          #  Check if combining less than 2 channel
+  2122          if len(set(this_picks)) < 2:
+  2123              warn(
+  2124                  f'Less than 2 channels in group "{this_group}" when '
+  2125                  f'combining by method "{method}".'
+  2126              )
+  2127          # If all good create more detailed dict without bad channels
+  2128          groups[this_group] = dict(picks=this_picks, ch_type=this_ch_type[0])
+  2129  
+  2130      # Combine channels and add them to the new instance
+  2131      for this_group, this_group_dict in groups.items():
+  2132          new_ch_names.append(this_group)
+  2133          new_ch_types.append(this_group_dict["ch_type"])
+  2134          this_picks = this_group_dict["picks"]
+  2135          this_data = np.take(inst_data, this_picks, axis=ch_axis)
+  2136          new_data.append(method(this_data))
+  2137      new_data = np.swapaxes(new_data, 0, ch_axis)
+  2138      info = create_info(
+  2139          sfreq=inst.info["sfreq"], ch_names=new_ch_names, ch_types=new_ch_types
+  2140      )
+  2141      # create new instances and make sure to copy important attributes
+  2142      if isinstance(inst, BaseRaw):
+  2143          combined_inst = RawArray(new_data, info, first_samp=inst.first_samp)
+  2144      elif isinstance(inst, BaseEpochs):
+  2145          combined_inst = EpochsArray(
+  2146              new_data,
+  2147              info,
+  2148              events=inst.events,
+  2149              event_id=inst.event_id,
+  2150              tmin=inst.times[0],
+  2151              baseline=inst.baseline,
+  2152          )
+  2153          if inst.metadata is not None:
+  2154              combined_inst.metadata = inst.metadata.copy()
+  2155      elif isinstance(inst, Evoked):
+  2156          combined_inst = EvokedArray(
+  2157              new_data, info, tmin=inst.times[0], baseline=inst.baseline
+  2158          )
+  2159  
+  2160      return combined_inst
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 32, $0.09):
+               Let me verify the file is syntactically correct:                      
+
+```
+cd /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/ && python3 -m py_compile channels.py && echo "Syntax OK"
+```
+
+Tool:
+<returncode>
+0
+<output>
+Syntax OK
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 33, $0.09):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+     Let me review all my changes:                                 
+
+```
+diff -u /dev/null /dev/null 2>/dev/null; (cd /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/ && git diff channels.py 2>/dev/null || cat channels.py | head -170 | tail -55)
+```
+
+Tool:
+<returncode>
+0
+<output>
+    object are re-ordered to match the template. The end result is that all
+    given objects define the same channels, in the same order.
+
+    Parameters
+    ----------
+    instances : list
+        A list of MNE-Python objects to equalize the channels for. Objects can
+        be of type Raw, Epochs, Evoked, AverageTFR, Spectrum, Forward, Covariance,
+        CrossSpectralDensity or Info.
+    copy : bool
+        When dropping and/or re-ordering channels, an object will be copied
+        when this parameter is set to ``True``. When set to ``False`` (the
+        default) the dropping and re-ordering of channels happens in-place.
+
+        .. versionadded:: 0.20.0
+    %(verbose)s
+
+    Returns
+    -------
+    equalized_instances : list
+        A list of MNE-Python objects that have the same channels defined in the
+        same order.
+
+    See Also
+    --------
+    mne.channels.unify_bad_channels
+    mne.channels.rename_channels
+    mne.channels.combine_channels
+    """
+    from ..cov import Covariance
+    from ..epochs import BaseEpochs
+    from ..evoked import Evoked
+    from ..forward import Forward
+    from ..io import BaseRaw
+    from ..time_frequency import BaseTFR, CrossSpectralDensity
+    from ..time_frequency.spectrum import BaseSpectrum
+
+    # Instances need to have a `ch_names` attribute and a `pick_channels`
+    # method that supports `ordered=True`.
+    allowed_types = (
+        BaseRaw,
+        BaseEpochs,
+        Evoked,
+        BaseTFR,
+        BaseSpectrum,
+        Forward,
+        Covariance,
+        CrossSpectralDensity,
+        Info,
+    )
+    allowed_types_str = (
+        "Raw, Epochs, Evoked, TFR, Spectrum, Forward, Covariance, CrossSpectralDensity or Info"
+    )
+    for inst in instances:
+        _validate_type(
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 34, $0.10):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+         
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py | sed -n '242,270p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   242      .. versionadded:: 1.6
+   243      """
+   244      from ..epochs import Epochs
+   245      from ..evoked import Evoked
+   246      from ..io import BaseRaw
+   247      from ..time_frequency.spectrum import BaseSpectrum
+   248  
+   249      # ensure input is list-like
+   250      _validate_type(insts, (list, tuple), "insts")
+   251      # ensure non-empty
+   252      if len(insts) == 0:
+   253          raise ValueError("insts must not be empty")
+   254      # ensure all insts are MNE objects, and all the same type
+   255      inst_type = type(insts[0])
+   256      valid_types = (BaseRaw, Epochs, Evoked, BaseSpectrum)
+   257      for inst in insts:
+   258          _validate_type(inst, valid_types, "each object in insts")
+   259          if type(inst) is not inst_type:
+   260              raise ValueError("All insts must be the same type")
+   261  
+   262      # ensure all insts have the same channels and channel order
+   263      ch_names = insts[0].ch_names
+   264      for inst in insts[1:]:
+   265          dif = set(inst.ch_names) ^ set(ch_names)
+   266          if len(dif):
+   267              raise ValueError(
+   268                  "Channels do not match across the objects in insts. Consider calling "
+   269                  "equalize_channels before calling this function."
+   270              )
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 35, $0.10):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+      Let me do a final verification to make sure the file is valid and complete:              
+
+```
+wc -l /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py && python3 -c "
+import ast
+with open('/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py') as f:
+    content = f.read()
+try:
+    ast.parse(content)
+    print('AST parse successful')
+except SyntaxError as e:
+    print(f'Syntax error: {e}')
+"
+```
+
+Tool:
+<returncode>
+0
+<output>
+    2332 /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt5scpakf/channels.py
+AST parse successful
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+=== STDERR ===

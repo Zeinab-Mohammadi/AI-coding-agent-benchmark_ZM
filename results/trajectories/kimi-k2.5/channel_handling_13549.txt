@@ -1,0 +1,1879 @@
+=== STDOUT ===
+👋 This is mini-swe-agent version 2.2.8.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/Users/user/Library/Application Support/mini-swe-agent/.env'
+Building agent config from specs: 
+['/Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/config/mini.yaml']
+
+System:
+You are a helpful assistant that can interact with a computer.
+
+User:
+Please solve this issue: Fix the bug in the file /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py.
+
+Context: This bug is in MNE-Python's channel handling pipeline. Channels represent individual EEG/MEG/fNIRS sensors on the 
+scalp or brain. Correct channel types, positions, and selection (picks) are critical — mixing up sensor types or locations 
+invalidates spatial analyses.
+
+The file is from the MNE-Python neuroscience library (PR #13549: FIX: Fix axis spines zorder in plot_evoked).
+Read the file, identify the bug, and fix it in place. Only modify 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py. Do not install packages or run tests.
+
+You can execute bash commands and edit files to implement the necessary changes.
+
+## Recommended Workflow
+
+This workflow should be done step-by-step so that you can iterate on your changes and any possible problems.
+
+1. Analyze the codebase by finding and reading relevant files
+2. Create a script to reproduce the issue
+3. Edit the source code to resolve the issue
+4. Verify your fix works by running your script again
+5. Test edge cases to ensure your fix is robust
+6. Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+   Do not combine it with any other command. <important>After this command, you cannot continue working on this 
+task.</important>
+
+## Command Execution Rules
+
+You are operating in an environment where
+
+1. You issue at least one command
+2. The system executes the command(s) in a subshell
+3. You see the result(s)
+4. You write your next command(s)
+
+Each response should include:
+
+1. **Reasoning text** where you explain your analysis and plan
+2. At least one tool call with your command
+
+**CRITICAL REQUIREMENTS:**
+
+- Your response SHOULD include reasoning text explaining what you're doing
+- Your response MUST include AT LEAST ONE bash tool call
+- Directory or environment variable changes are not persistent. Every action is executed in a new subshell.
+- However, you can prefix any action with `MY_ENV_VAR=MY_VALUE cd /path/to/working/dir && ...` or write/load environment 
+variables from files
+- Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+  Do not combine it with any other command. <important>After this command, you cannot continue working on this 
+task.</important>
+
+Example of a CORRECT response:
+<example_response>
+I need to understand the structure of the repository first. Let me check what files are in the current directory to get a 
+better understanding of the codebase.
+
+[Makes bash tool call with {"command": "ls -la"} as arguments]
+</example_response>
+
+<system_information>
+Darwin 25.4.0 Darwin Kernel Version 25.4.0: Thu Mar 19 19:30:44 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6000 x86_64
+</system_information>
+
+## Useful command examples
+
+### Create a new file:
+
+```bash
+cat <<'EOF' > newfile.py
+import numpy as np
+hello = "world"
+print(hello)
+EOF
+```
+
+### Edit files with sed:<important>
+You are on MacOS. For all the below examples, you need to use `sed -i ''` instead of `sed -i`.
+</important>```bash
+# Replace all occurrences
+sed -i 's/old_string/new_string/g' filename.py
+
+# Replace only first occurrence
+sed -i 's/old_string/new_string/' filename.py
+
+# Replace first occurrence on line 1
+sed -i '1s/old_string/new_string/' filename.py
+
+# Replace all occurrences in lines 1-10
+sed -i '1,10s/old_string/new_string/g' filename.py
+```
+
+### View file content:
+
+```bash
+# View specific lines with numbers
+nl -ba filename.py | sed -n '10,20p'
+```
+
+### Any other command you want to run
+
+```bash
+anything
+```
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 1, $0.00):
+ I'll help you fix the bug in the evoked.py file. Let me start by reading the file to understand its content and identify the
+issue.
+
+```
+cat /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py
+```
+
+Tool:
+<returncode>
+0
+<output_head>
+"""Functions to plot evoked M/EEG data (besides topographies)."""
+
+# Authors: The MNE-Python contributors.
+# License: BSD-3-Clause
+# Copyright the MNE-Python contributors.
+
+from copy import deepcopy
+from functools import partial
+from itertools import cycle
+from numbers import Integral
+
+import numpy as np
+
+from .._fiff.pick import (
+    _DATA_CH_TYPES_SPLIT,
+    _PICK_TYPES_DATA_DICT,
+    _VALID_CHANNEL_TYPES,
+    _picks_to_idx,
+    channel_indices_by_type,
+    channel_type,
+    pick_info,
+)
+from ..defaults import _handle_default
+from ..utils import (
+    _check_ch_locs,
+    _check_if_nan,
+    _clean_names,
+    _is_numeric,
+    _pl,
+    _time_mask,
+    _to_rgb,
+    _validate_type,
+    fill_doc,
+    logger,
+    verbose,
+    warn,
+)
+from .topo import _plot_evoked_topo
+from .topomap import (
+    _check_sphere,
+    _draw_outlines,
+    _get_pos_outlines,
+    _make_head_outlines,
+    _prepare_topomap,
+    _prepare_topomap_plot,
+    _set_contour_locator,
+    plot_topomap,
+)
+from .utils import (
+    DraggableColorbar,
+    _check_cov,
+    _check_delayed_ssp,
+    _check_option,
+    _check_time_unit,
+    _draw_proj_checkbox,
+    _get_cmap,
+    _get_color_list,
+    _make_combine_callable,
+    _plot_masked_image,
+    _prepare_joint_axes,
+    _process_times,
+    _set_title_multiple_electrodes,
+    _set_window_title,
+    _setup_ax_spines,
+    _setup_cmap,
+    _setup_plot_projector,
+    _setup_vmin_vmax,
+    _triage_rank_sss,
+    _trim_ticks,
+    _validate_if_list_of_axes,
+    plt_show,
+)
+
+
+def _butterfly_onpick(event, params):
+    """Add a channel name on click."""
+    params["need_draw"] = True
+    ax = event.artist.axes
+    ax_idx = np.where([ax is a for a in params["axes"]])[0]
+    if len(ax_idx) == 0:  # this can happen if ax param is used
+        return  # let the other axes handle it
+    else:
+        ax_idx = ax_idx[0]
+    lidx = np.where([line is event.artist for line in params["lines"][ax_idx]])[0][0]
+    ch_name = params["ch_names"][params["idxs"][ax_idx][lidx]]
+    text = params["texts"][ax_idx]
+    x = event.artist.get_xdata()[event.ind[0]]
+    y = event.artist.get_ydata()[event.ind[0]]
+    text.set_x(x)
+    text.set_y(y)
+    text.set_text(ch_name)
+    text.set_color(event.artist.get_color())
+    text.set_alpha(1.0)
+    text.set_zorder(len(ax.lines))  # to make sure it goes on top of the lines
+    text.set_path_effects(params["path_effects"])
+    # do NOT redraw here, since for butterfly plots hundreds of lines could
+    # potentially be picked -- use on_button_press (happens once per click)
+    # to do the drawing
+
+
+def _butterfly_on_button_press(event, params):
+    """Only draw once for picking."""
+    if params["need_draw"]:
+        event.canvas.draw()
+    else:
+        idx = np.where([event.inaxes is ax for ax in params["axes"]])[0]
+        if len(idx) == 1:
+            text = params["texts"][idx[0]]
+            text.set_alpha(0.0)
+            text.set_path_effects([])
+            event.canvas.draw()
+    params["need_draw"] = False
+
+
+def _line_plot_onselect(
+    xmin,
+    xmax,
+    ch_types,
+    info,
+    data,
+    times,
+    text=None,
+    psd=False,
+    time_unit="s",
+    sphere=None,
+):
+    """Draw topomaps from the selected area."""
+    import matplotlib.pyplot as plt
+
+    from ..channels.layout import _pair_grad_sensors
+
+    ch_types = [type_ for type_ in ch_types if type_ in ("eeg", "grad", "mag")]
+    if len(ch_types) == 0:
+        raise ValueError("Interactive topomaps only allowed for EEG and MEG channels.")
+    if (
+        "grad" in ch_types
+        and len(_pair_grad_sensors(info, topomap_coords=False, raise_error=False)) < 2
+    ):
+        ch_types.remove("grad")
+        if len(ch_types) == 0:
+            return
+
+    vert_lines = list()
+    if text is not None:
+        text.set_visible(True)
+        ax = text.axes
+        vert_lines.append(ax.axvline(xmin, zorder=0, color="red"))
+        vert_lines.append(ax.axvline(xmax, zorder=0, color="red"))
+        fill = ax.axvspan(xmin, xmax, alpha=0.2, color="green")
+        evoked_fig = plt.gcf()
+        evoked_fig.canvas.draw()
+        evoked_fig.canvas.flush_events()
+
+    minidx = np.abs(times - xmin).argmin()
+    maxidx = np.abs(times - xmax).argmin()
+    fig, axarr = plt.subplots(
+        1,
+        len(ch_types),
+        squeeze=False,
+        figsize=(3 * len(ch_types), 3),
+        layout="constrained",
+    )
+
+    for idx, ch_type in enumerate(ch_types):
+        if ch_type not in ("eeg", "grad", "mag"):
+            continue
+        (
+            picks,
+            pos,
+            merge_channels,
+            _,
+            ch_type,
+            this_sphere,
+            clip_origin,
+        ) = _prepare_topomap_plot(info, ch_type, sphere=sphere)
+        outlines = _make_head_outlines(this_sphere, pos, "head", clip_origin)
+        if len(pos) < 2:
+            fig.delaxes(axarr[0][idx])
+            continue
+        this_data = data[picks, minidx:maxidx]
+        if merge_channels:
+            from ..channels.layout import _merge_ch_data
+
+            m
+<output_tail>
+) * h_scale + h_margin + 0.025
+        # make sure there is room for a legend axis (sometimes not if only a
+        # few channels were picked)
+        data_lefts = layout.pos[:, 0]
+        data_bottoms = layout.pos[:, 1]
+        legend_left = data_lefts.max()
+        legend_bottom = data_bottoms.min()
+        overlap = np.any(
+            np.logical_and(
+                np.logical_and(
+                    data_lefts <= legend_left, legend_left <= (data_lefts + axes_width)
+                ),
+                np.logical_and(
+                    data_bottoms <= legend_bottom,
+                    legend_bottom <= (data_bottoms + axes_height),
+                ),
+            )
+        )
+        right_edge = legend_left + axes_width
+        n_columns = (right_edge - data_lefts.min()) / axes_width
+        scale_factor = n_columns / (n_columns + 1)
+        if overlap:
+            layout.pos[:, [0, 2]] *= scale_factor
+        # `axes` will be a list of (axis_object, channel_index) tuples
+        axes = list(
+            iter_topography(
+                info,
+                layout=layout,
+                on_pick=click_func,
+                fig=fig,
+                fig_facecolor="w",
+                axis_facecolor="w",
+                axis_spinecolor="k",
+                layout_scale=None,
+                legend=True,
+            )
+        )
+        picks = list(picks)
+    del info
+
+    # for each axis, compute the grand average and (maybe) the CI
+    # (per sensor if topo, otherwise aggregating over sensors)
+    c_func = None if do_topo else combine_func
+    all_data = list()
+    all_cis = list()
+    for _picks, (ax, idx) in zip(picks, axes):
+        data_dict = dict()
+        ci_dict = dict()
+        for cond in conditions:
+            this_evokeds = evokeds[cond]
+            # assign ci_fun first to get arg checking
+            ci_fun = _get_ci_function_pce(ci, do_topo=do_topo)
+            # for bootstrap or parametric CIs, skip when only 1 observation
+            if not callable(ci):
+                ci_fun = ci_fun if len(this_evokeds) > 1 else None
+            res = _get_data_and_ci(
+                this_evokeds,
+                combine,
+                c_func,
+                ch_type=ch_type,
+                picks=_picks,
+                scaling=scalings,
+                ci_fun=ci_fun,
+            )
+            data_dict[cond] = res[0]
+            if ci_fun is not None:
+                ci_dict[cond] = res[1]
+        all_data.append(data_dict)  # grand means, or indiv. sensors if do_topo
+        all_cis.append(ci_dict)
+    del evokeds
+
+    # compute ylims
+    allvalues = list()
+    for _dict in all_data:
+        for _array in list(_dict.values()):
+            allvalues.append(_array[np.newaxis])  # to get same .ndim as CIs
+    for _dict in all_cis:
+        allvalues.extend(list(_dict.values()))
+    allvalues = np.concatenate(allvalues)
+    norm = np.all(allvalues > 0)
+    orig_ymin, orig_ymax = ylim.get(ch_type, [None, None])
+    ymin, ymax = _setup_vmin_vmax(allvalues, orig_ymin, orig_ymax, norm)
+    del allvalues
+
+    # add empty data and title for the legend axis
+    if do_topo:
+        all_data.append({cond: np.array([]) for cond in data_dict})
+        all_cis.append({cond: None for cond in ci_dict})
+        all_ch_names.append("")
+
+    # plot!
+    for (ax, idx), data, cis in zip(axes, all_data, all_cis):
+        if do_topo:
+            title = all_ch_names[idx]
+        # plot the data
+        _times = [] if idx == -1 else times
+        _plot_compare_evokeds(
+            ax, data, conditions, _times, cis, _styles, title, do_topo
+        )
+        # draw axes & vlines
+        skip_axlabel = do_topo and (idx != -1)
+        _draw_axes_pce(
+            ax,
+            ymin,
+            ymax,
+            truncate_yaxis,
+            truncate_xaxis,
+            invert_y,
+            vlines,
+            tmin,
+            tmax,
+            units,
+            skip_axlabel,
+            time_unit,
+        )
+    # add inset scalp plot showing location of sensors picked
+    if show_sensors:
+        _validate_type(
+            show_sensors,
+            (np.int64, bool, str, type(None)),
+            "show_sensors",
+            "numeric, str, None or bool",
+        )
+        if not _check_ch_locs(info=one_evoked.info, picks=pos_picks):
+            warn(
+                "Cannot find channel coordinates in the supplied Evokeds. "
+                "Not showing channel locations."
+            )
+        else:
+            _evoked_sensor_legend(
+                one_evoked.info, pos_picks, ymin, ymax, show_sensors, ax, sphere
+            )
+    # add color/linestyle/colormap legend(s)
+    if legend:
+        _draw_legend_pce(
+            legend, split_legend, _styles, _linestyles, _colors, _cmap, do_topo, ax
+        )
+    if cmap is not None:
+        _draw_colorbar_pce(ax, _colors, _cmap, colorbar_title, colorbar_ticks)
+    # finish
+    if topo_disp_title:
+        ax.figure.suptitle(topo_title)
+    plt_show(show)
+    return [ax.figure]
+
+<elided_chars>
+107581
+<warning>
+Output too long.
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 2, $0.00):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+ Let me search for information about axis spines and zorder in the file, as the issue mentions "FIX: Fix axis spines zorder 
+in plot_evoked":
+
+```
+grep -n "zorder" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | head -50
+```
+
+Tool:
+<returncode>
+0
+<output>
+94:    text.set_zorder(len(ax.lines))  # to make sure it goes on top of the lines
+147:        vert_lines.append(ax.axvline(xmin, zorder=0, color="red"))
+148:        vert_lines.append(ax.axvline(xmax, zorder=0, color="red"))
+248:    ax.scatter(pos_x, pos_y, color=colors, s=size * 0.8, marker=".", zorder=1)
+252:            pos_x[bads], pos_y[bads], s=size / 6, marker=".", color="w", zorder=1
+289:    zorder="unsorted",
+504:            zorder,
+586:    zorder,
+685:                if zorder == "std":
+689:                elif zorder == "unsorted":
+691:                elif not callable(zorder):
+692:                    error = '`zorder` must be a function, "std" or "unsorted", not {0}.'
+693:                    raise TypeError(error.format(type(zorder)))
+695:                    z_ord = zorder(D)
+704:                            zorder=z + 1 if _spat_col else 1,
+742:                    zorder=1,
+747:                        times, this_gfp, color=gfp_color, zorder=3, alpha=line_alpha
+754:                    zorder=4,
+760:                    line.set_zorder(2)
+769:                    zorder=3,
+806:                        zorder=99,
+823:                zorder=3,
+986:    zorder="unsorted",
+1054:    zorder : str | callable
+1133:        zorder=zorder,
+1839:        defaults are passed: ``spatial_colors=True``, ``zorder='std'``.
+1984:        zorder="std",
+2059:            zorder=1,
+2067:            timepoint, color="grey", linestyle="-", linewidth=1.5, alpha=0.66, zorder=0
+2543:            times, dat, zorder=1000, label=condition, clip_on=False, **styles[condition]
+2552:                zorder=9,
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 3, $0.00):
+```
+grep -n "spine" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | head -50
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+64:    _setup_ax_spines,
+2455:    # determine ymin/ymax for spine truncation
+2472:    _setup_ax_spines(
+2711:        Whether to shorten the y-axis spine. If ``'auto'``, the spine is truncated
+2717:        Whether to shorten the x-axis spine. If ``True``, the spine is
+3120:                axis_spinecolor="k",
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 4, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | sed -n '2460,2490p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  2460              # number. ylims are already symmetric about 0 or have a lower bound
+  2461              # of 0, so div. by 2 should suffice.
+  2462              ybounds = np.array([ymin, ymax]) / 2.0
+  2463              precision = 0.25
+  2464              ybounds = np.round(ybounds / precision) * precision
+  2465          elif truncate_yaxis == "auto":
+  2466              # truncate to existing max/min ticks
+  2467              ybounds = _trim_ticks(ax.get_yticks(), ymin, ymax)[[0, -1]]
+  2468          else:
+  2469              raise ValueError(
+  2470                  f'"truncate_yaxis" must be bool or "auto", got {truncate_yaxis}'
+  2471              )
+  2472      _setup_ax_spines(
+  2473          ax,
+  2474          vlines,
+  2475          tmin,
+  2476          tmax,
+  2477          ybounds[0],
+  2478          ybounds[1],
+  2479          invert_y,
+  2480          unit,
+  2481          truncate_xaxis,
+  2482          trunc_y,
+  2483          skip_axlabel,
+  2484          time_unit=time_unit,
+  2485      )
+  2486  
+  2487  
+  2488  def _get_data_and_ci(
+  2489      evoked, combine, combine_func, ch_type, picks, scaling=1, ci_fun=None
+  2490  ):
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 5, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+find /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x -name "*.py" -exec grep -l "_setup_ax_spines" {} \;
+```
+
+Tool:
+<returncode>
+0
+<output>
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 6, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+cat /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/utils.py 2>/dev/null | head -100 || find 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x -name "utils.py" -exec head -100 {} \;
+```
+
+Tool:
+<returncode>
+0
+<output>
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 7, $0.02):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+   
+
+```
+find /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x -type f -name "*.py" | head -20
+```
+
+Tool:
+<returncode>
+0
+<output>
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 8, $0.02):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+   
+
+```
+grep -rn "def _setup_ax_spines" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/
+```
+
+Tool:
+<returncode>
+1
+<output>
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 9, $0.02):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+   
+
+```
+grep -n "from .utils import" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+49:from .utils import (
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 10, $0.02):
+   
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | sed -n '49,80p'
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+    49  from .utils import (
+    50      DraggableColorbar,
+    51      _check_cov,
+    52      _check_delayed_ssp,
+    53      _check_option,
+    54      _check_time_unit,
+    55      _draw_proj_checkbox,
+    56      _get_cmap,
+    57      _get_color_list,
+    58      _make_combine_callable,
+    59      _plot_masked_image,
+    60      _prepare_joint_axes,
+    61      _process_times,
+    62      _set_title_multiple_electrodes,
+    63      _set_window_title,
+    64      _setup_ax_spines,
+    65      _setup_cmap,
+    66      _setup_plot_projector,
+    67      _setup_vmin_vmax,
+    68      _triage_rank_sss,
+    69      _trim_ticks,
+    70      _validate_if_list_of_axes,
+    71      plt_show,
+    72  )
+    73  
+    74  
+    75  def _butterfly_onpick(event, params):
+    76      """Add a channel name on click."""
+    77      params["need_draw"] = True
+    78      ax = event.artist.axes
+    79      ax_idx = np.where([ax is a for a in params["axes"]])[0]
+    80      if len(ax_idx) == 0:  # this can happen if ax param is used
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 11, $0.02):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+       
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | sed -n '2045,2080p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  2045      # connection lines
+  2046      # draw the connection lines between time series and topoplots
+  2047      for timepoint, map_ax_ in zip(times_ts, map_ax):
+  2048          con = ConnectionPatch(
+  2049              xyA=[timepoint, ts_ax.get_ylim()[1]],
+  2050              xyB=[0.5, 0],
+  2051              coordsA="data",
+  2052              coordsB="axes fraction",
+  2053              axesA=ts_ax,
+  2054              axesB=map_ax_,
+  2055              color="grey",
+  2056              linestyle="-",
+  2057              linewidth=1.5,
+  2058              alpha=0.66,
+  2059              zorder=1,
+  2060              clip_on=False,
+  2061          )
+  2062          fig.add_artist(con)
+  2063  
+  2064      # mark times in time series plot
+  2065      for timepoint in times_ts:
+  2066          ts_ax.axvline(
+  2067              timepoint, color="grey", linestyle="-", linewidth=1.5, alpha=0.66, zorder=0
+  2068          )
+  2069  
+  2070      # show and return it
+  2071      plt_show(show)
+  2072      return fig
+  2073  
+  2074  
+  2075  ###############################################################################
+  2076  # The following functions are all helpers for plot_compare_evokeds.           #
+  2077  ###############################################################################
+  2078  
+  2079  
+  2080  def _check_loc_legal(loc, what="your choice", default=1):
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 12, $0.02):
+       
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | sed -n '2400,2490p'
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+  2400              for label, linestyle in linestyles.items():
+  2401                  line = mlines.Line2D(
+  2402                      [], [], label=label, linestyle=linestyle, color="black"
+  2403                  )
+  2404                  lines.append(line)
+  2405      # legend params
+  2406      ncol = 1 + (len(lines) // 5)
+  2407      loc = _check_loc_legal(legend, "legend")
+  2408      legend_params = dict(loc=loc, frameon=True, ncol=ncol)
+  2409      # special placement (above dedicated legend axes) in topoplot
+  2410      if do_topo and isinstance(legend, bool):
+  2411          legend_params.update(loc="lower right", bbox_to_anchor=(1, 1))
+  2412      # draw the legend
+  2413      if any([draw_styles, draw_colors, draw_linestyles]):
+  2414          labels = [_abbreviate_label(line.get_label()) for line in lines]
+  2415          ax.legend(lines, labels, **legend_params)
+  2416  
+  2417  
+  2418  _LABEL_LIMIT = 40
+  2419  
+  2420  
+  2421  # don't let labels be excessively long
+  2422  def _abbreviate_label(label):
+  2423      if len(label) > _LABEL_LIMIT:
+  2424          label = label[:_LABEL_LIMIT] + " …"
+  2425      return label
+  2426  
+  2427  
+  2428  def _draw_axes_pce(
+  2429      ax,
+  2430      ymin,
+  2431      ymax,
+  2432      truncate_yaxis,
+  2433      truncate_xaxis,
+  2434      invert_y,
+  2435      vlines,
+  2436      tmin,
+  2437      tmax,
+  2438      unit,
+  2439      skip_axlabel=True,
+  2440      time_unit="s",
+  2441  ):
+  2442      """Position, draw, and truncate axes for plot_compare_evokeds."""
+  2443      # avoid matplotlib errors
+  2444      if ymin == ymax:
+  2445          ymax += 1e-15
+  2446      if tmin == tmax:
+  2447          tmax += 1e-9
+  2448      ax.set_xlim(tmin, tmax)
+  2449      # for dark backgrounds:
+  2450      ax.patch.set_alpha(0)
+  2451      if not np.isfinite([ymin, ymax]).all():  # nothing plotted
+  2452          return
+  2453      ax.set_ylim(ymin, ymax)
+  2454      ybounds = (ymin, ymax)
+  2455      # determine ymin/ymax for spine truncation
+  2456      trunc_y = True if truncate_yaxis == "auto" else truncate_yaxis
+  2457      if truncate_yaxis:
+  2458          if isinstance(truncate_yaxis, bool):
+  2459              # truncate to half the max abs. value and round to a nice-ish
+  2460              # number. ylims are already symmetric about 0 or have a lower bound
+  2461              # of 0, so div. by 2 should suffice.
+  2462              ybounds = np.array([ymin, ymax]) / 2.0
+  2463              precision = 0.25
+  2464              ybounds = np.round(ybounds / precision) * precision
+  2465          elif truncate_yaxis == "auto":
+  2466              # truncate to existing max/min ticks
+  2467              ybounds = _trim_ticks(ax.get_yticks(), ymin, ymax)[[0, -1]]
+  2468          else:
+  2469              raise ValueError(
+  2470                  f'"truncate_yaxis" must be bool or "auto", got {truncate_yaxis}'
+  2471              )
+  2472      _setup_ax_spines(
+  2473          ax,
+  2474          vlines,
+  2475          tmin,
+  2476          tmax,
+  2477          ybounds[0],
+  2478          ybounds[1],
+  2479          invert_y,
+  2480          unit,
+  2481          truncate_xaxis,
+  2482          trunc_y,
+  2483          skip_axlabel,
+  2484          time_unit=time_unit,
+  2485      )
+  2486  
+  2487  
+  2488  def _get_data_and_ci(
+  2489      evoked, combine, combine_func, ch_type, picks, scaling=1, ci_fun=None
+  2490  ):
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 13, $0.02):
+           
+
+```
+grep -n "vlines" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | head -40
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+2435:    vlines,
+2474:        vlines,
+2609:    vlines="auto",
+2696:    vlines : ``"auto"`` | list of float
+2876:    if vlines == "auto":
+2877:        vlines = [0.0] if (tmin < 0 < tmax) else []
+2878:    _validate_type(vlines, (list, tuple), "vlines", "list or tuple")
+2975:                    vlines=vlines,
+3038:            vlines=vlines,
+3056:                vlines=vlines,
+3187:        # draw axes & vlines
+3196:            vlines,
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 14, $0.03):
+               
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | sed -n '680,780p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   680                      colors = col * len(idx)
+   681                  for i in bad_ch_idx:
+   682                      if i in idx:
+   683                          colors[idx.index(i)] = bad_color
+   684  
+   685                  if zorder == "std":
+   686                      # find the channels with the least activity
+   687                      # to map them in front of the more active ones
+   688                      z_ord = D.std(axis=1).argsort()
+   689                  elif zorder == "unsorted":
+   690                      z_ord = list(range(D.shape[0]))
+   691                  elif not callable(zorder):
+   692                      error = '`zorder` must be a function, "std" or "unsorted", not {0}.'
+   693                      raise TypeError(error.format(type(zorder)))
+   694                  else:
+   695                      z_ord = zorder(D)
+   696  
+   697                  # plot channels
+   698                  for ch_idx, z in enumerate(z_ord):
+   699                      line_list.append(
+   700                          ax.plot(
+   701                              times,
+   702                              D[ch_idx],
+   703                              picker=True,
+   704                              zorder=z + 1 if _spat_col else 1,
+   705                              color=colors[ch_idx],
+   706                              alpha=line_alpha,
+   707                              linewidth=0.5,
+   708                          )[0]
+   709                      )
+   710                      line_list[-1].set_pickradius(3.0)
+   711  
+   712              # Plot GFP / RMS
+   713              if gfp:
+   714                  if gfp in [True, "only"]:
+   715                      if this_type == "eeg":
+   716                          this_gfp = D.std(axis=0, ddof=0)
+   717                          label = "GFP"
+   718                      else:
+   719                          this_gfp = np.linalg.norm(D, axis=0) / np.sqrt(len(D))
+   720                          label = "RMS"
+   721  
+   722                  gfp_color = 3 * (0.0,) if spatial_colors is True else (0.0, 1.0, 0.0)
+   723                  this_ylim = (
+   724                      ax.get_ylim()
+   725                      if (ylim is None or this_type not in ylim.keys())
+   726                      else ylim[this_type]
+   727                  )
+   728                  if gfp_only:
+   729                      y_offset = 0.0
+   730                      this_ylim = (0, 1.1 * np.max(this_gfp) or 1)
+   731                  else:
+   732                      y_offset = this_ylim[0]
+   733                  this_gfp += y_offset
+   734                  ax.autoscale(False)
+   735                  ax.set_ylim(this_ylim)
+   736                  ax.fill_between(
+   737                      times,
+   738                      y_offset,
+   739                      this_gfp,
+   740                      color="none",
+   741                      facecolor=gfp_color,
+   742                      zorder=1,
+   743                      alpha=0.2,
+   744                  )
+   745                  line_list.append(
+   746                      ax.plot(
+   747                          times, this_gfp, color=gfp_color, zorder=3, alpha=line_alpha
+   748                      )[0]
+   749                  )
+   750                  ax.text(
+   751                      times[0] + 0.01 * (times[-1] - times[0]),
+   752                      this_gfp[0] + 0.05 * np.diff(ax.get_ylim())[0],
+   753                      label,
+   754                      zorder=4,
+   755                      color=gfp_color,
+   756                      path_effects=gfp_path_effects,
+   757                  )
+   758              for ii, line in zip(idx, line_list):
+   759                  if ii in bad_ch_idx:
+   760                      line.set_zorder(2)
+   761                      if spatial_colors is True:
+   762                          line.set_linestyle("--")
+   763              ax.set_ylabel(ch_unit)
+   764              texts.append(
+   765                  ax.text(
+   766                      0,
+   767                      0,
+   768                      "",
+   769                      zorder=3,
+   770                      verticalalignment="baseline",
+   771                      horizontalalignment="left",
+   772                      fontweight="bold",
+   773                      alpha=0,
+   774                      clip_on=True,
+   775                  )
+   776              )
+   777  
+   778              if xlim is not None:
+   779                  if xlim == "tight":
+   780                      xlim = (times[0], times[-1])
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 15, $0.03):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+                       
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | sed -n '800,900p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   800                      ax.fill_betweenx(
+   801                          this_ylim,
+   802                          this_highlight[0],
+   803                          this_highlight[1],
+   804                          facecolor="orange",
+   805                          alpha=0.15,
+   806                          zorder=99,
+   807                      )
+   808                  # Put back the y limits as fill_betweenx messes them up
+   809                  ax.set_ylim(this_ylim)
+   810  
+   811          lines.append(line_list)
+   812  
+   813      if selectable:
+   814          for ax in np.array(axes)[selectables]:
+   815              if len(ax.lines) == 1:
+   816                  continue
+   817              text = ax.annotate(
+   818                  "Loading...",
+   819                  xy=(0.01, 0.1),
+   820                  xycoords="axes fraction",
+   821                  fontsize=20,
+   822                  color="green",
+   823                  zorder=3,
+   824              )
+   825              text.set_visible(False)
+   826              callback_onselect = partial(
+   827                  _line_plot_onselect,
+   828                  ch_types=ch_types_used,
+   829                  info=info,
+   830                  data=data,
+   831                  times=times,
+   832                  text=text,
+   833                  psd=psd,
+   834                  time_unit=time_unit,
+   835                  sphere=sphere,
+   836              )
+   837              blit = False if plt.get_backend() == "MacOSX" else True
+   838              minspan = 0 if len(times) < 2 else times[1] - times[0]
+   839              ax._span_selector = SpanSelector(
+   840                  ax,
+   841                  callback_onselect,
+   842                  "horizontal",
+   843                  minspan=minspan,
+   844                  useblit=blit,
+   845                  props=dict(alpha=0.5, facecolor="red"),
+   846              )
+   847  
+   848  
+   849  def _add_nave(ax, nave):
+   850      """Add nave to axes."""
+   851      if nave is not None:
+   852          text_nave = f"={nave}" if round(nave) == nave else rf"$\approx${round(nave, 2)}"
+   853          ax.annotate(
+   854              r"N$_{\mathrm{ave}}$" + text_nave,
+   855              ha="right",
+   856              va="bottom",
+   857              xy=(1, 1),
+   858              xycoords="axes fraction",
+   859              xytext=(0, 5),
+   860              textcoords="offset pixels",
+   861          )
+   862  
+   863  
+   864  def _handle_spatial_colors(colors, info, idx, ch_type, psd, ax, sphere):
+   865      """Set up spatial colors."""
+   866      used_nm = np.array(_clean_names(info["ch_names"]))[idx]
+   867      # find indices for bads
+   868      bads = [np.where(used_nm == bad)[0][0] for bad in info["bads"] if bad in used_nm]
+   869      pos, outlines = _get_pos_outlines(info, idx, sphere=sphere)
+   870      loc = 1 if psd else 2  # Legend in top right for psd plot.
+   871      _plot_legend(pos, colors, ax, bads, outlines, loc)
+   872  
+   873  
+   874  def _plot_image(
+   875      data,
+   876      ax,
+   877      this_type,
+   878      picks,
+   879      cmap,
+   880      unit,
+   881      units,
+   882      scalings,
+   883      times,
+   884      xlim,
+   885      ylim,
+   886      titles,
+   887      colorbar=True,
+   888      mask=None,
+   889      mask_cmap=None,
+   890      mask_style=None,
+   891      mask_alpha=0.25,
+   892      nave=None,
+   893      time_unit="s",
+   894      show_names=False,
+   895      ch_names=None,
+   896  ):
+   897      """Plot images."""
+   898      import matplotlib.pyplot as plt
+   899  
+   900      assert time_unit is not None
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 16, $0.03):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+                                   
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | sed -n '2870,2920p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  2870      sphere = _check_sphere(sphere, info)
+  2871      time_unit, times = _check_time_unit(time_unit, one_evoked.times)
+  2872      tmin, tmax = times[0], times[-1]
+  2873      # set some defaults
+  2874      if ylim is None:
+  2875          ylim = dict()
+  2876      if vlines == "auto":
+  2877          vlines = [0.0] if (tmin < 0 < tmax) else []
+  2878      _validate_type(vlines, (list, tuple), "vlines", "list or tuple")
+  2879  
+  2880      # is picks a channel type (or None)?
+  2881      orig_picks = deepcopy(picks)
+  2882      picks, picked_types = _picks_to_idx(info, picks, return_kind=True)
+  2883      # some things that depend on picks:
+  2884      ch_names = np.array(one_evoked.ch_names)[picks].tolist()
+  2885      all_types = _DATA_CH_TYPES_SPLIT + (
+  2886          "misc",  # from ICA
+  2887          "emg",
+  2888          "ref_meg",
+  2889          "eyegaze",
+  2890          "pupil",
+  2891      )
+  2892      ch_types = [
+  2893          t for t in info.get_channel_types(picks=picks, unique=True) if t in all_types
+  2894      ]
+  2895      picks_by_type = channel_indices_by_type(info, picks)
+  2896      # discard picks from non-data channels (e.g., ref_meg)
+  2897      good_picks = sum([picks_by_type[ch_type] for ch_type in ch_types], [])
+  2898      picks = np.intersect1d(picks, good_picks)
+  2899      if show_sensors is None:
+  2900          show_sensors = len(picks) == 1
+  2901  
+  2902      _validate_type(combine, types=(None, "callable", str), item_name="combine")
+  2903      # cannot combine a single channel
+  2904      if (len(picks) < 2) and combine is not None:
+  2905          warn(
+  2906              f'Only {len(picks)} channel in "picks"; cannot combine by method '
+  2907              f'"{combine}".'
+  2908          )
+  2909      # `combine` defaults to GFP unless picked a single channel or axes='topo'
+  2910      do_topo = isinstance(axes, str) and axes == "topo"
+  2911      if combine is None and len(picks) > 1 and not do_topo:
+  2912          combine = "gfp"
+  2913      # convert `combine` into callable (if None or str)
+  2914      combine_funcs = {
+  2915          ch_type: _make_combine_callable(combine, ch_type=ch_type)
+  2916          for ch_type in ch_types
+  2917      }
+  2918  
+  2919      # title
+  2920      title = _title_helper_pce(
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 17, $0.04):
+                                       
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | sed -n '2965,3020p'
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+  2965                  combine=None,
+  2966              )
+  2967              figs.extend(
+  2968                  plot_compare_evokeds(
+  2969                      evokeds,
+  2970                      picks=_picks,
+  2971                      colors=colors,
+  2972                      cmap=cmap,
+  2973                      linestyles=linestyles,
+  2974                      styles=styles,
+  2975                      vlines=vlines,
+  2976                      ci=ci,
+  2977                      truncate_yaxis=truncate_yaxis,
+  2978                      ylim=ylim,
+  2979                      invert_y=invert_y,
+  2980                      legend=legend,
+  2981                      show_sensors=show_sensors,
+  2982                      axes=ax,
+  2983                      title=_title,
+  2984                      split_legend=split_legend,
+  2985                      show=show,
+  2986                      sphere=sphere,
+  2987                  )
+  2988              )
+  2989          return figs
+  2990  
+  2991      # colors and colormap. This yields a `styles` dict with one entry per
+  2992      # condition, specifying at least color and linestyle. THIS MUST BE DONE
+  2993      # AFTER THE "MULTIPLE CHANNEL TYPES" LOOP
+  2994      (
+  2995          _styles,
+  2996          _linestyles,
+  2997          _colors,
+  2998          _cmap,
+  2999          colorbar_title,
+  3000          colorbar_ticks,
+  3001      ) = _handle_styles_pce(styles, linestyles, colors, cmap, conditions)
+  3002      # From now on there is only 1 channel type
+  3003      if not len(ch_types):
+  3004          got_idx = _picks_to_idx(info, picks=orig_picks)
+  3005          got = np.unique(np.array(info.get_channel_types())[got_idx]).tolist()
+  3006          raise RuntimeError(
+  3007              f"No valid channel type(s) provided. Got {got}. Valid channel types are:"
+  3008              f"\n{all_types}."
+  3009          )
+  3010      ch_type = ch_types[0]
+  3011      # some things that depend on ch_type:
+  3012      units = _handle_default("units")[ch_type]
+  3013      scalings = _handle_default("scalings")[ch_type]
+  3014      combine_func = combine_funcs[ch_type]
+  3015      # prep for topo
+  3016      pos_picks = picks  # need this version of picks for sensor location inset
+  3017      info = pick_info(info, sel=picks, copy=True)
+  3018      all_ch_names = info["ch_names"]
+  3019      if not do_topo:
+  3020          # add vacuous "index" (needed for topo) so same code works for both
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 18, $0.04):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+                                           
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | sed -n '3180,3210p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  3180          if do_topo:
+  3181              title = all_ch_names[idx]
+  3182          # plot the data
+  3183          _times = [] if idx == -1 else times
+  3184          _plot_compare_evokeds(
+  3185              ax, data, conditions, _times, cis, _styles, title, do_topo
+  3186          )
+  3187          # draw axes & vlines
+  3188          skip_axlabel = do_topo and (idx != -1)
+  3189          _draw_axes_pce(
+  3190              ax,
+  3191              ymin,
+  3192              ymax,
+  3193              truncate_yaxis,
+  3194              truncate_xaxis,
+  3195              invert_y,
+  3196              vlines,
+  3197              tmin,
+  3198              tmax,
+  3199              units,
+  3200              skip_axlabel,
+  3201              time_unit,
+  3202          )
+  3203      # add inset scalp plot showing location of sensors picked
+  3204      if show_sensors:
+  3205          _validate_type(
+  3206              show_sensors,
+  3207              (np.int64, bool, str, type(None)),
+  3208              "show_sensors",
+  3209              "numeric, str, None or bool",
+  3210          )
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 19, $0.04):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+                                                       
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | sed -n '480,590p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   480      projector, whitened_ch_names = _setup_plot_projector(
+   481          info, noise_cov, proj=proj is True, nave=evoked.nave
+   482      )
+   483      if len(whitened_ch_names) > 0:
+   484          unit = False
+   485      if projector is not None:
+   486          evoked.data[:] = np.dot(projector, evoked.data)
+   487      if proj == "reconstruct":
+   488          evoked = evoked._reconstruct_proj()
+   489  
+   490      if plot_type == "butterfly":
+   491          _plot_lines(
+   492              evoked.data,
+   493              info,
+   494              picks,
+   495              fig,
+   496              axes,
+   497              spatial_colors,
+   498              unit,
+   499              units,
+   500              scalings,
+   501              hline,
+   502              gfp,
+   503              types,
+   504              zorder,
+   505              xlim,
+   506              ylim,
+   507              times,
+   508              bad_ch_idx,
+   509              titles,
+   510              ch_types_used,
+   511              selectable,
+   512              False,
+   513              line_alpha=1.0,
+   514              nave=evoked.nave,
+   515              time_unit=time_unit,
+   516              sphere=sphere,
+   517              highlight=highlight,
+   518          )
+   519          plt.setp(axes, xlabel=f"Time ({time_unit})")
+   520  
+   521      elif plot_type == "image":
+   522          for ai, (ax, this_type) in enumerate(zip(axes, ch_types_used)):
+   523              use_nave = evoked.nave if ai == 0 else None
+   524              this_picks = list(picks[types == this_type])
+   525              _plot_image(
+   526                  evoked.data,
+   527                  ax,
+   528                  this_type,
+   529                  this_picks,
+   530                  cmap,
+   531                  unit,
+   532                  units,
+   533                  scalings,
+   534                  times,
+   535                  xlim,
+   536                  ylim,
+   537                  titles,
+   538                  colorbar=colorbar,
+   539                  mask=mask,
+   540                  mask_style=mask_style,
+   541                  mask_cmap=mask_cmap,
+   542                  mask_alpha=mask_alpha,
+   543                  nave=use_nave,
+   544                  time_unit=time_unit,
+   545                  show_names=show_names,
+   546                  ch_names=evoked.ch_names,
+   547              )
+   548      if proj == "interactive":
+   549          _check_delayed_ssp(evoked)
+   550          params = dict(
+   551              evoked=evoked,
+   552              fig=fig,
+   553              projs=info["projs"],
+   554              axes=axes,
+   555              types=types,
+   556              units=units,
+   557              scalings=scalings,
+   558              unit=unit,
+   559              ch_types_used=ch_types_used,
+   560              picks=picks,
+   561              plot_update_proj_callback=_plot_update_evoked,
+   562              plot_type=plot_type,
+   563          )
+   564          _draw_proj_checkbox(None, params)
+   565  
+   566      plt.setp(fig.axes[: len(ch_types_used) - 1], xlabel="")
+   567      if draw:
+   568          fig.canvas.draw()  # for axes plots update axes.
+   569      plt_show(show)
+   570      return fig
+   571  
+   572  
+   573  def _plot_lines(
+   574      data,
+   575      info,
+   576      picks,
+   577      fig,
+   578      axes,
+   579      spatial_colors,
+   580      unit,
+   581      units,
+   582      scalings,
+   583      hline,
+   584      gfp,
+   585      types,
+   586      zorder,
+   587      xlim,
+   588      ylim,
+   589      times,
+   590      bad_ch_idx,
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 20, $0.05):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+                                                               
+
+```
+grep -rn "axvline\|axhline\|vline" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | head -30
+```
+
+Tool:
+<returncode>
+0
+<output>
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:147:        vert_lines.append(ax.axvline(xmin, 
+zorder=0, color="red"))
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:148:        vert_lines.append(ax.axvline(xmax, 
+zorder=0, color="red"))
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:790:                    ax.axhline(h, linestyle="--", 
+linewidth=2, color=c)
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:1152:    vline=(0.0,),
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:1195:    vline : list of float | float | None
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:1284:        vline=vline,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:1721:            ax.axhline(1, color="red", 
+linestyle="--", lw=2.0)
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:1782:    ax.axvline(0, color="k", ls=":", lw=1)
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:1783:    ax.axhline(0, color="k", ls=":", lw=1)
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2066:        ts_ax.axvline(
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2435:    vlines,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2474:        vlines,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2609:    vlines="auto",
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2696:    vlines : ``"auto"`` | list of float
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2876:    if vlines == "auto":
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2877:        vlines = [0.0] if (tmin < 0 < tmax) else 
+[]
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2878:    _validate_type(vlines, (list, tuple), 
+"vlines", "list or tuple")
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2975:                    vlines=vlines,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:3038:            vlines=vlines,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:3056:                vlines=vlines,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:3187:        # draw axes & vlines
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:3196:            vlines,
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 21, $0.05):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+ Let me search for any implementation or references related to the axis spine setup and zorder:   
+
+```
+grep -rn "_setup_ax_spines\|spines\|zorder" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | head -60
+```
+
+Tool:
+<returncode>
+0
+<output>
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:64:    _setup_ax_spines,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:94:    text.set_zorder(len(ax.lines))  # to make sure 
+it goes on top of the lines
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:147:        vert_lines.append(ax.axvline(xmin, 
+zorder=0, color="red"))
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:148:        vert_lines.append(ax.axvline(xmax, 
+zorder=0, color="red"))
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:248:    ax.scatter(pos_x, pos_y, color=colors, s=size 
+* 0.8, marker=".", zorder=1)
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:252:            pos_x[bads], pos_y[bads], s=size / 6, 
+marker=".", color="w", zorder=1
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:289:    zorder="unsorted",
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:504:            zorder,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:586:    zorder,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:685:                if zorder == "std":
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:689:                elif zorder == "unsorted":
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:691:                elif not callable(zorder):
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:692:                    error = '`zorder` must be a 
+function, "std" or "unsorted", not {0}.'
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:693:                    raise 
+TypeError(error.format(type(zorder)))
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:695:                    z_ord = zorder(D)
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:704:                            zorder=z + 1 if 
+_spat_col else 1,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:742:                    zorder=1,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:747:                        times, this_gfp, 
+color=gfp_color, zorder=3, alpha=line_alpha
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:754:                    zorder=4,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:760:                    line.set_zorder(2)
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:769:                    zorder=3,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:806:                        zorder=99,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:823:                zorder=3,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:986:    zorder="unsorted",
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:1054:    zorder : str | callable
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:1133:        zorder=zorder,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:1839:        defaults are passed: 
+``spatial_colors=True``, ``zorder='std'``.
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:1984:        zorder="std",
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2059:            zorder=1,
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2067:            timepoint, color="grey", 
+linestyle="-", linewidth=1.5, alpha=0.66, zorder=0
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2472:    _setup_ax_spines(
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2543:            times, dat, zorder=1000, 
+label=condition, clip_on=False, **styles[condition]
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py:2552:                zorder=9,
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 22, $0.05):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+                                       
+
+```
+find /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x -type f -name "*.py" -exec ls -la {} \;
+```
+
+Tool:
+<returncode>
+0
+<output>
+-rw-r--r--  1 user  staff  117594 May  1 22:29 /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 23, $0.05):
+       
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | sed -n '2530,2570p'
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+  2530          raise TypeError(
+  2531              f'"ci" must be None, bool, float or callable, got {type(ci).__name__}'
+  2532          )
+  2533  
+  2534  
+  2535  def _plot_compare_evokeds(
+  2536      ax, data_dict, conditions, times, ci_dict, styles, title, topo
+  2537  ):
+  2538      """Plot evokeds (to compare them; with CIs) based on a data_dict."""
+  2539      for condition in conditions:
+  2540          # plot the actual data ('dat') as a line
+  2541          dat = data_dict[condition].T
+  2542          ax.plot(
+  2543              times, dat, zorder=1000, label=condition, clip_on=False, **styles[condition]
+  2544          )
+  2545          # plot the confidence interval if available
+  2546          if ci_dict.get(condition, None) is not None:
+  2547              ci_ = ci_dict[condition]
+  2548              ax.fill_between(
+  2549                  times,
+  2550                  ci_[0].flatten(),
+  2551                  ci_[1].flatten(),
+  2552                  zorder=9,
+  2553                  color=styles[condition]["color"],
+  2554                  alpha=0.3,
+  2555                  clip_on=False,
+  2556              )
+  2557      if topo:
+  2558          ax.text(-0.1, 1, title, transform=ax.transAxes)
+  2559      else:
+  2560          ax.set_title(title)
+  2561  
+  2562  
+  2563  def _title_helper_pce(title, picked_types, picks, ch_names, ch_type, combine):
+  2564      """Format title for plot_compare_evokeds."""
+  2565      if title is None:
+  2566          title = (
+  2567              _handle_default("titles").get(picks, None)
+  2568              if picked_types
+  2569              else _set_title_multiple_electrodes(title, combine, ch_names)
+  2570          )
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 24, $0.06):
+ Let me create a test script to understand the current state and identify the bug:                                      
+
+```
+cd /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x && python3 -c "
+import ast
+import sys
+
+with open('evoked.py', 'r') as f:
+    content = f.read()
+
+# Look for _setup_ax_spines definition or usage
+tree = ast.parse(content)
+
+for node in ast.walk(tree):
+    if isinstance(node, ast.Call):
+        if hasattr(node.func, 'id') and node.func.id == '_setup_ax_spines':
+            print(f'Found _setup_ax_spines call at line {node.lineno}')
+            for kw in node.keywords:
+                print(f'  Keyword: {kw.arg}')
+        elif hasattr(node.func, 'attr') and node.func.attr == 'axvline':
+            print(f'Found axvline call at line {node.lineno}')
+            for kw in node.keywords:
+                if hasattr(kw, 'arg') and kw.arg == 'zorder':
+                    print(f'  zorder: {ast.dump(kw.value)}')
+"
+
+```
+
+Tool:
+<returncode>
+0
+<output>
+Found axvline call at line 1782
+Found _setup_ax_spines call at line 2472
+  Keyword: time_unit
+Found axvline call at line 2066
+  zorder: Constant(value=0)
+Found axvline call at line 147
+  zorder: Constant(value=0)
+Found axvline call at line 148
+  zorder: Constant(value=0)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 25, $0.06):
+                       
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp2cq6fq4x/evoked.py | sed -n '2470,2490p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  2470                  f'"truncate_yaxis" must be bool or "auto", got {truncate_yaxis}'
+  2471              )
+  2472      _setup_ax_spines(
+  2473          ax,
+  2474          vlines,
+  2475          tmin,
+  2476          tmax,
+  2477          ybounds[0],
+  2478          ybounds[1],
+  2479          invert_y,
+  2480          unit,
+  2481          truncate_xaxis,
+  2482          trunc_y,
+  2483          skip_axlabel,
+  2484          time_unit=time_unit,
+  2485      )
+  2486  
+  2487  
+  2488  def _get_data_and_ci(
+  2489      evoked, combine, combine_func, ch_type, picks, scaling=1, ci_fun=None
+  2490  ):
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+=== STDERR ===

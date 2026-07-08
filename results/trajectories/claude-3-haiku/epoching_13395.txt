@@ -1,0 +1,431 @@
+=== STDOUT ===
+👋 This is mini-swe-agent version 2.2.8.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/Users/user/Library/Application Support/mini-swe-agent/.env'
+Building agent config from specs: 
+['/Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/config/mini.yaml']
+
+System:
+You are a helpful assistant that can interact with a computer.
+
+User:
+Please solve this issue: Fix the bug in the file /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpdje4vf7m/eeglab.py.
+
+Context: This bug is in MNE-Python's epoching pipeline. Remember: in a standard EEG/MEG workflow, epochs are time-locked 
+segments around experimental events. Baseline correction should use a pre-stimulus period. Incorrect time alignment or 
+baseline logic corrupts all downstream analyses.
+
+The file is from the MNE-Python neuroscience library (PR #13395: Fix eeglab loading issue while calling 
+`_get_montage_information` due to scalar `x,y,z` in 'nodatchans').
+Read the file, identify the bug, and fix it in place. Only modify 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpdje4vf7m/eeglab.py. Do not install packages or run tests.
+
+You can execute bash commands and edit files to implement the necessary changes.
+
+## Recommended Workflow
+
+This workflow should be done step-by-step so that you can iterate on your changes and any possible problems.
+
+1. Analyze the codebase by finding and reading relevant files
+2. Create a script to reproduce the issue
+3. Edit the source code to resolve the issue
+4. Verify your fix works by running your script again
+5. Test edge cases to ensure your fix is robust
+6. Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+   Do not combine it with any other command. <important>After this command, you cannot continue working on this 
+task.</important>
+
+## Command Execution Rules
+
+You are operating in an environment where
+
+1. You issue at least one command
+2. The system executes the command(s) in a subshell
+3. You see the result(s)
+4. You write your next command(s)
+
+Each response should include:
+
+1. **Reasoning text** where you explain your analysis and plan
+2. At least one tool call with your command
+
+**CRITICAL REQUIREMENTS:**
+
+- Your response SHOULD include reasoning text explaining what you're doing
+- Your response MUST include AT LEAST ONE bash tool call
+- Directory or environment variable changes are not persistent. Every action is executed in a new subshell.
+- However, you can prefix any action with `MY_ENV_VAR=MY_VALUE cd /path/to/working/dir && ...` or write/load environment 
+variables from files
+- Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+  Do not combine it with any other command. <important>After this command, you cannot continue working on this 
+task.</important>
+
+Example of a CORRECT response:
+<example_response>
+I need to understand the structure of the repository first. Let me check what files are in the current directory to get a 
+better understanding of the codebase.
+
+[Makes bash tool call with {"command": "ls -la"} as arguments]
+</example_response>
+
+<system_information>
+Darwin 25.4.0 Darwin Kernel Version 25.4.0: Thu Mar 19 19:30:44 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6000 x86_64
+</system_information>
+
+## Useful command examples
+
+### Create a new file:
+
+```bash
+cat <<'EOF' > newfile.py
+import numpy as np
+hello = "world"
+print(hello)
+EOF
+```
+
+### Edit files with sed:<important>
+You are on MacOS. For all the below examples, you need to use `sed -i ''` instead of `sed -i`.
+</important>```bash
+# Replace all occurrences
+sed -i 's/old_string/new_string/g' filename.py
+
+# Replace only first occurrence
+sed -i 's/old_string/new_string/' filename.py
+
+# Replace first occurrence on line 1
+sed -i '1s/old_string/new_string/' filename.py
+
+# Replace all occurrences in lines 1-10
+sed -i '1,10s/old_string/new_string/g' filename.py
+```
+
+### View file content:
+
+```bash
+# View specific lines with numbers
+nl -ba filename.py | sed -n '10,20p'
+```
+
+### Any other command you want to run
+
+```bash
+anything
+```
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+
+Exit:
+litellm.AuthenticationError: AuthenticationError: OpenrouterException - {"error":{"message":"No cookie auth credentials 
+found","code":401}} You can permanently set your API key with `mini-extra config set KEY VALUE`.
+
+=== STDERR ===
+╭──────────────────────────────────────────── Traceback (most recent call last) ────────────────────────────────────────────╮
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_ │
+│ handler.py:240 in _make_common_sync_call                                                                                  │
+│                                                                                                                           │
+│     237 │   │                                                                                                             │
+│     238 │   │   for i in range(max(max_retry_on_unprocessable_entity_error, 1)):                                          │
+│     239 │   │   │   try:                                                                                                  │
+│ ❱   240 │   │   │   │   response = sync_httpx_client.post(                                                                │
+│     241 │   │   │   │   │   url=api_base,                                                                                 │
+│     242 │   │   │   │   │   headers=headers,                                                                              │
+│     243 │   │   │   │   │   data=(                                                                                        │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/litellm/llms/custom_httpx/http_hand │
+│ ler.py:1085 in post                                                                                                       │
+│                                                                                                                           │
+│   1082 │   │   │   │   llm_provider="litellm-httpx-handler",                                                              │
+│   1083 │   │   │   )                                                                                                      │
+│   1084 │   │   except httpx.HTTPStatusError as e:                                                                         │
+│ ❱ 1085 │   │   │   _raise_masked_sync_error(e, stream)                                                                    │
+│   1086 │   │   except Exception as e:                                                                                     │
+│   1087 │   │   │   raise e                                                                                                │
+│   1088                                                                                                                    │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/litellm/llms/custom_httpx/http_hand │
+│ ler.py:354 in _raise_masked_sync_error                                                                                    │
+│                                                                                                                           │
+│    351 │   │   _body = mask_sensitive_info(_safe_read_response(e.response))                                               │
+│    352 │   │   raise MaskedHTTPStatusError(e, message=_body, text=_body) from None                                        │
+│    353 │   _text = mask_sensitive_info(_safe_get_response_text(e.response))                                               │
+│ ❱  354 │   raise MaskedHTTPStatusError(e, message=_text, text=_text) from None                                            │
+│    355                                                                                                                    │
+│    356                                                                                                                    │
+│    357 async def _raise_masked_async_error(e: httpx.HTTPStatusError, stream: bool) -> None:                               │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+MaskedHTTPStatusError: Client error '401 Unauthorized' for url 'https://openrouter.ai/api/v1/chat/completions'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+╭──────────────────────────────────────────── Traceback (most recent call last) ────────────────────────────────────────────╮
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/litellm/main.py:3325 in completion  │
+│                                                                                                                           │
+│   3322 │   │   │   data = {"model": model, "messages": messages, **optional_params}                                       │
+│   3323 │   │   │                                                                                                          │
+│   3324 │   │   │   ## COMPLETION CALL                                                                                     │
+│ ❱ 3325 │   │   │   response = base_llm_http_handler.completion(                                                           │
+│   3326 │   │   │   │   model=model,                                                                                       │
+│   3327 │   │   │   │   stream=stream,                                                                                     │
+│   3328 │   │   │   │   messages=messages,                                                                                 │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_ │
+│ handler.py:564 in completion                                                                                              │
+│                                                                                                                           │
+│     561 │   │   else:                                                                                                     │
+│     562 │   │   │   sync_httpx_client = client                                                                            │
+│     563 │   │                                                                                                             │
+│ ❱   564 │   │   response = self._make_common_sync_call(                                                                   │
+│     565 │   │   │   sync_httpx_client=sync_httpx_client,                                                                  │
+│     566 │   │   │   provider_config=provider_config,                                                                      │
+│     567 │   │   │   api_base=api_base,                                                                                    │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_ │
+│ handler.py:265 in _make_common_sync_call                                                                                  │
+│                                                                                                                           │
+│     262 │   │   │   │   │   )                                                                                             │
+│     263 │   │   │   │   │   continue                                                                                      │
+│     264 │   │   │   │   else:                                                                                             │
+│ ❱   265 │   │   │   │   │   raise self._handle_error(e=e, provider_config=provider_config)                                │
+│     266 │   │   │   except Exception as e:                                                                                │
+│     267 │   │   │   │   raise self._handle_error(e=e, provider_config=provider_config)                                    │
+│     268 │   │   │   break                                                                                                 │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/litellm/llms/custom_httpx/llm_http_ │
+│ handler.py:5091 in _handle_error                                                                                          │
+│                                                                                                                           │
+│    5088 │   │   │   │   headers=error_headers,                                                                            │
+│    5089 │   │   │   )                                                                                                     │
+│    5090 │   │                                                                                                             │
+│ ❱  5091 │   │   raise provider_config.get_error_class(                                                                    │
+│    5092 │   │   │   error_message=error_text,                                                                             │
+│    5093 │   │   │   status_code=status_code,                                                                              │
+│    5094 │   │   │   headers=error_headers,                                                                                │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+OpenRouterException: {"error":{"message":"No cookie auth credentials found","code":401}}
+
+During handling of the above exception, another exception occurred:
+
+╭──────────────────────────────────────────── Traceback (most recent call last) ────────────────────────────────────────────╮
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/run/mini.py:102 in     │
+│ main                                                                                                                      │
+│                                                                                                                           │
+│    99 │   model = get_model(config=config.get("model", {}))                                                               │
+│   100 │   env = get_environment(config.get("environment", {}), default_type="local")                                      │
+│   101 │   agent = get_agent(model, env, config.get("agent", {}), default_type="interactive")                              │
+│ ❱ 102 │   agent.run(run_task)                                                                                             │
+│   103 │   if (output_path := config.get("agent", {}).get("output_path")):                                                 │
+│   104 │   │   console.print(f"Saved trajectory to [bold green]'{output_path}'[/bold green]")                              │
+│   105 │   return agent                                                                                                    │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/agents/default.py:87   │
+│ in run                                                                                                                    │
+│                                                                                                                           │
+│    84 │   │   )                                                                                                           │
+│    85 │   │   while True:                                                                                                 │
+│    86 │   │   │   try:                                                                                                    │
+│ ❱  87 │   │   │   │   self.step()                                                                                         │
+│    88 │   │   │   except InterruptAgentFlow as e:                                                                         │
+│    89 │   │   │   │   self.add_messages(*e.messages)                                                                      │
+│    90 │   │   │   except Exception as e:                                                                                  │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/agents/interactive.py: │
+│ 87 in step                                                                                                                │
+│                                                                                                                           │
+│    84 │   │   # Override the step method to handle user interruption                                                      │
+│    85 │   │   try:                                                                                                        │
+│    86 │   │   │   console.print(Rule())                                                                                   │
+│ ❱  87 │   │   │   return super().step()                                                                                   │
+│    88 │   │   except KeyboardInterrupt:                                                                                   │
+│    89 │   │   │   interruption_message = self._prompt_and_handle_slash_commands(                                          │
+│    90 │   │   │   │   "\n\n[bold yellow]Interrupted.[/bold yellow] "                                                      │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/agents/default.py:101  │
+│ in step                                                                                                                   │
+│                                                                                                                           │
+│    98 │                                                                                                                   │
+│    99 │   def step(self) -> list[dict]:                                                                                   │
+│   100 │   │   """Query the LM, execute actions."""                                                                        │
+│ ❱ 101 │   │   return self.execute_actions(self.query())                                                                   │
+│   102 │                                                                                                                   │
+│   103 │   def query(self) -> dict:                                                                                        │
+│   104 │   │   """Query the model and return model messages. Override to add hooks."""                                     │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/agents/interactive.py: │
+│ 73 in query                                                                                                               │
+│                                                                                                                           │
+│    70 │   │   │   │   │   return msg                                                                                      │
+│    71 │   │   try:                                                                                                        │
+│    72 │   │   │   with console.status("Waiting for the LM to respond..."):                                                │
+│ ❱  73 │   │   │   │   return super().query()                                                                              │
+│    74 │   │   except LimitsExceeded:                                                                                      │
+│    75 │   │   │   console.print(                                                                                          │
+│    76 │   │   │   │   f"Limits exceeded. Limits: {self.config.step_limit} steps, ${self.config                            │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/agents/default.py:114  │
+│ in query                                                                                                                  │
+│                                                                                                                           │
+│   111 │   │   │   │   }                                                                                                   │
+│   112 │   │   │   )                                                                                                       │
+│   113 │   │   self.n_calls += 1                                                                                           │
+│ ❱ 114 │   │   message = self.model.query(self.messages)                                                                   │
+│   115 │   │   self.cost += message.get("extra", {}).get("cost", 0.0)                                                      │
+│   116 │   │   self.add_messages(message)                                                                                  │
+│   117 │   │   return message                                                                                              │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/models/litellm_model.p │
+│ y:81 in query                                                                                                             │
+│                                                                                                                           │
+│    78 │   │   return set_cache_control(prepared, mode=self.config.set_cache_control)                                      │
+│    79 │                                                                                                                   │
+│    80 │   def query(self, messages: list[dict[str, str]], **kwargs) -> dict:                                              │
+│ ❱  81 │   │   for attempt in retry(logger=logger, abort_exceptions=self.abort_exceptions):                                │
+│    82 │   │   │   with attempt:                                                                                           │
+│    83 │   │   │   │   response = self._query(self._prepare_messages_for_api(messages), **kwarg                            │
+│    84 │   │   cost_output = self._calculate_cost(response)                                                                │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/tenacity/__init__.py:438 in         │
+│ __iter__                                                                                                                  │
+│                                                                                                                           │
+│   435 │   │                                                                                                               │
+│   436 │   │   retry_state = RetryCallState(self, fn=None, args=(), kwargs={})                                             │
+│   437 │   │   while True:                                                                                                 │
+│ ❱ 438 │   │   │   do = self.iter(retry_state=retry_state)                                                                 │
+│   439 │   │   │   if isinstance(do, DoAttempt):                                                                           │
+│   440 │   │   │   │   yield AttemptManager(retry_state=retry_state)                                                       │
+│   441 │   │   │   elif isinstance(do, DoSleep):                                                                           │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/tenacity/__init__.py:371 in iter    │
+│                                                                                                                           │
+│   368 │   │   self._begin_iter(retry_state)                                                                               │
+│   369 │   │   result = None                                                                                               │
+│   370 │   │   for action in self.iter_state.actions:                                                                      │
+│ ❱ 371 │   │   │   result = action(retry_state)                                                                            │
+│   372 │   │   return result                                                                                               │
+│   373 │                                                                                                                   │
+│   374 │   def _begin_iter(self, retry_state: "RetryCallState") -> None:  # noqa                                           │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/tenacity/__init__.py:393 in         │
+│ <lambda>                                                                                                                  │
+│                                                                                                                           │
+│   390 │                                                                                                                   │
+│   391 │   def _post_retry_check_actions(self, retry_state: "RetryCallState") -> None:                                     │
+│   392 │   │   if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):                             │
+│ ❱ 393 │   │   │   self._add_action_func(lambda rs: rs.outcome.result())                                                   │
+│   394 │   │   │   return                                                                                                  │
+│   395 │   │                                                                                                               │
+│   396 │   │   if self.after is not None:                                                                                  │
+│                                                                                                                           │
+│ /Users/user/.local/share/uv/python/cpython-3.11.15-macos-x86_64-none/lib/python3.11/concurrent/futures/_base.py:449 in  │
+│ result                                                                                                                    │
+│                                                                                                                           │
+│   446 │   │   │   │   if self._state in [CANCELLED, CANCELLED_AND_NOTIFIED]:                                              │
+│   447 │   │   │   │   │   raise CancelledError()                                                                          │
+│   448 │   │   │   │   elif self._state == FINISHED:                                                                       │
+│ ❱ 449 │   │   │   │   │   return self.__get_result()                                                                      │
+│   450 │   │   │   │                                                                                                       │
+│   451 │   │   │   │   self._condition.wait(timeout)                                                                       │
+│   452                                                                                                                     │
+│                                                                                                                           │
+│ /Users/user/.local/share/uv/python/cpython-3.11.15-macos-x86_64-none/lib/python3.11/concurrent/futures/_base.py:401 in  │
+│ __get_result                                                                                                              │
+│                                                                                                                           │
+│   398 │   def __get_result(self):                                                                                         │
+│   399 │   │   if self._exception:                                                                                         │
+│   400 │   │   │   try:                                                                                                    │
+│ ❱ 401 │   │   │   │   raise self._exception                                                                               │
+│   402 │   │   │   finally:                                                                                                │
+│   403 │   │   │   │   # Break a reference cycle with the exception in self._exception                                     │
+│   404 │   │   │   │   self = None                                                                                         │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/models/litellm_model.p │
+│ y:83 in query                                                                                                             │
+│                                                                                                                           │
+│    80 │   def query(self, messages: list[dict[str, str]], **kwargs) -> dict:                                              │
+│    81 │   │   for attempt in retry(logger=logger, abort_exceptions=self.abort_exceptions):                                │
+│    82 │   │   │   with attempt:                                                                                           │
+│ ❱  83 │   │   │   │   response = self._query(self._prepare_messages_for_api(messages), **kwarg                            │
+│    84 │   │   cost_output = self._calculate_cost(response)                                                                │
+│    85 │   │   GLOBAL_MODEL_STATS.add(cost_output["cost"])                                                                 │
+│    86 │   │   message = response.choices[0].message.model_dump()                                                          │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/models/litellm_model.p │
+│ y:73 in _query                                                                                                            │
+│                                                                                                                           │
+│    70 │   │   │   )                                                                                                       │
+│    71 │   │   except litellm.exceptions.AuthenticationError as e:                                                         │
+│    72 │   │   │   e.message += " You can permanently set your API key with `mini-extra config                             │
+│ ❱  73 │   │   │   raise e                                                                                                 │
+│    74 │                                                                                                                   │
+│    75 │   def _prepare_messages_for_api(self, messages: list[dict]) -> list[dict]:                                        │
+│    76 │   │   prepared = [{k: v for k, v in msg.items() if k != "extra"} for msg in messages]                             │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/models/litellm_model.p │
+│ y:65 in _query                                                                                                            │
+│                                                                                                                           │
+│    62 │                                                                                                                   │
+│    63 │   def _query(self, messages: list[dict[str, str]], **kwargs):                                                     │
+│    64 │   │   try:                                                                                                        │
+│ ❱  65 │   │   │   return litellm.completion(                                                                              │
+│    66 │   │   │   │   model=self.config.model_name,                                                                       │
+│    67 │   │   │   │   messages=messages,                                                                                  │
+│    68 │   │   │   │   tools=[BASH_TOOL],                                                                                  │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/litellm/utils.py:1772 in wrapper    │
+│                                                                                                                           │
+│   1769 │   │   │   │   logging_obj.failure_handler(                                                                       │
+│   1770 │   │   │   │   │   e, traceback_exception, start_time, end_time                                                   │
+│   1771 │   │   │   │   )  # DO NOT MAKE THREADED - router retry fallback relies on this!                                  │
+│ ❱ 1772 │   │   │   raise e                                                                                                │
+│   1773 │                                                                                                                  │
+│   1774 │   @wraps(original_function)                                                                                      │
+│   1775 │   async def wrapper_async(*args, **kwargs):  # noqa: PLR0915                                                     │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/litellm/utils.py:1593 in wrapper    │
+│                                                                                                                           │
+│   1590 │   │   │   │   except Exception as e:                                                                             │
+│   1591 │   │   │   │   │   print_verbose(f"Error while checking max token limit: {str(e)}")                               │
+│   1592 │   │   │   # MODEL CALL                                                                                           │
+│ ❱ 1593 │   │   │   result = original_function(*args, **kwargs)                                                            │
+│   1594 │   │   │   end_time = datetime.datetime.now()                                                                     │
+│   1595 │   │   │   if _is_streaming_request(                                                                              │
+│   1596 │   │   │   │   kwargs=kwargs,                                                                                     │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/litellm/main.py:4420 in completion  │
+│                                                                                                                           │
+│   4417 │   │   return response                                                                                            │
+│   4418 │   except Exception as e:                                                                                         │
+│   4419 │   │   ## Map to OpenAI Exception                                                                                 │
+│ ❱ 4420 │   │   raise exception_type(                                                                                      │
+│   4421 │   │   │   model=model,                                                                                           │
+│   4422 │   │   │   custom_llm_provider=custom_llm_provider,                                                               │
+│   4423 │   │   │   original_exception=e,                                                                                  │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/litellm/litellm_core_utils/exceptio │
+│ n_mapping_utils.py:2456 in exception_type                                                                                 │
+│                                                                                                                           │
+│   2453 │   │   # don't let an error with mapping interrupt the user from receiving an error fro                           │
+│   2454 │   │   if exception_mapping_worked:                                                                               │
+│   2455 │   │   │   setattr(e, "litellm_response_headers", litellm_response_headers)                                       │
+│ ❱ 2456 │   │   │   raise e                                                                                                │
+│   2457 │   │   else:                                                                                                      │
+│   2458 │   │   │   for error_type in litellm.LITELLM_EXCEPTION_TYPES:                                                     │
+│   2459 │   │   │   │   if isinstance(e, error_type):                                                                      │
+│                                                                                                                           │
+│ /Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/litellm/litellm_core_utils/exceptio │
+│ n_mapping_utils.py:2327 in exception_type                                                                                 │
+│                                                                                                                           │
+│   2324 │   │   │   │   │   │   )                                                                                          │
+│   2325 │   │   │   │   │   elif original_exception.status_code == 401:                                                    │
+│   2326 │   │   │   │   │   │   exception_mapping_worked = True                                                            │
+│ ❱ 2327 │   │   │   │   │   │   raise AuthenticationError(                                                                 │
+│   2328 │   │   │   │   │   │   │   message=f"AuthenticationError: {exception_provider} - {error                           │
+│   2329 │   │   │   │   │   │   │   llm_provider=custom_llm_provider,                                                      │
+│   2330 │   │   │   │   │   │   │   model=model,                                                                           │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+AuthenticationError: litellm.AuthenticationError: AuthenticationError: OpenrouterException - {"error":{"message":"No cookie 
+auth credentials found","code":401}} You can permanently set your API key with `mini-extra config set KEY VALUE`.

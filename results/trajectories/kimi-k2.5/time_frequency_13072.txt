@@ -1,0 +1,1587 @@
+=== STDOUT ===
+👋 This is mini-swe-agent version 2.2.8.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/Users/user/Library/Application Support/mini-swe-agent/.env'
+Building agent config from specs: ['/Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/config/mini.yaml']
+
+System:
+You are a helpful assistant that can interact with a computer.
+
+User:
+Please solve this issue: Fix the bug in the file /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py.
+
+Context: This bug is in MNE-Python's time-frequency or spectral analysis pipeline. Power spectral density (PSD) and time-frequency representations (TFR) must preserve correct frequency resolution and units. Dimension mismatches or incorrect 
+normalization lead to wrong power estimates across all frequencies.
+
+The file is from the MNE-Python neuroscience library (PR #13072: Backport PR #13067 on branch maint/1.9 ([BUG] Fix taper weighting in computation of TFR multitaper power)).
+Read the file, identify the bug, and fix it in place. Only modify /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py. Do not install packages or run tests.
+
+You can execute bash commands and edit files to implement the necessary changes.
+
+## Recommended Workflow
+
+This workflow should be done step-by-step so that you can iterate on your changes and any possible problems.
+
+1. Analyze the codebase by finding and reading relevant files
+2. Create a script to reproduce the issue
+3. Edit the source code to resolve the issue
+4. Verify your fix works by running your script again
+5. Test edge cases to ensure your fix is robust
+6. Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+   Do not combine it with any other command. <important>After this command, you cannot continue working on this task.</important>
+
+## Command Execution Rules
+
+You are operating in an environment where
+
+1. You issue at least one command
+2. The system executes the command(s) in a subshell
+3. You see the result(s)
+4. You write your next command(s)
+
+Each response should include:
+
+1. **Reasoning text** where you explain your analysis and plan
+2. At least one tool call with your command
+
+**CRITICAL REQUIREMENTS:**
+
+- Your response SHOULD include reasoning text explaining what you're doing
+- Your response MUST include AT LEAST ONE bash tool call
+- Directory or environment variable changes are not persistent. Every action is executed in a new subshell.
+- However, you can prefix any action with `MY_ENV_VAR=MY_VALUE cd /path/to/working/dir && ...` or write/load environment variables from files
+- Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+  Do not combine it with any other command. <important>After this command, you cannot continue working on this task.</important>
+
+Example of a CORRECT response:
+<example_response>
+I need to understand the structure of the repository first. Let me check what files are in the current directory to get a better understanding of the codebase.
+
+[Makes bash tool call with {"command": "ls -la"} as arguments]
+</example_response>
+
+<system_information>
+Darwin 25.4.0 Darwin Kernel Version 25.4.0: Thu Mar 19 19:30:44 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6000 x86_64
+</system_information>
+
+## Useful command examples
+
+### Create a new file:
+
+```bash
+cat <<'EOF' > newfile.py
+import numpy as np
+hello = "world"
+print(hello)
+EOF
+```
+
+### Edit files with sed:<important>
+You are on MacOS. For all the below examples, you need to use `sed -i ''` instead of `sed -i`.
+</important>```bash
+# Replace all occurrences
+sed -i 's/old_string/new_string/g' filename.py
+
+# Replace only first occurrence
+sed -i 's/old_string/new_string/' filename.py
+
+# Replace first occurrence on line 1
+sed -i '1s/old_string/new_string/' filename.py
+
+# Replace all occurrences in lines 1-10
+sed -i '1,10s/old_string/new_string/g' filename.py
+```
+
+### View file content:
+
+```bash
+# View specific lines with numbers
+nl -ba filename.py | sed -n '10,20p'
+```
+
+### Any other command you want to run
+
+```bash
+anything
+```
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 1, $0.00):
+ Let me start by reading the file to understand the bug and the codebase structure.
+
+```
+cat /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py
+```
+
+Tool:
+<returncode>
+0
+<output_head>
+"""A module which implements the time-frequency estimation.
+
+Morlet code inspired by Matlab code from Sheraz Khan & Brainstorm & SPM
+"""
+
+# Authors: The MNE-Python contributors.
+# License: BSD-3-Clause
+# Copyright the MNE-Python contributors.
+
+import inspect
+from copy import deepcopy
+from functools import partial
+
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.fft import fft, ifft
+from scipy.signal import argrelmax
+
+from .._fiff.meas_info import ContainsMixin, Info
+from .._fiff.pick import _picks_to_idx, pick_info
+from ..baseline import _check_baseline, rescale
+from ..channels.channels import UpdateChannelsMixin
+from ..channels.layout import _find_topomap_coords, _merge_ch_data, _pair_grad_sensors
+from ..defaults import _BORDER_DEFAULT, _EXTRAPOLATE_DEFAULT, _INTERPOLATION_DEFAULT
+from ..filter import next_fast_len
+from ..parallel import parallel_func
+from ..utils import (
+    ExtendedTimeMixin,
+    GetEpochsMixin,
+    SizeMixin,
+    _build_data_frame,
+    _check_combine,
+    _check_event_id,
+    _check_fname,
+    _check_method_kwargs,
+    _check_option,
+    _check_pandas_index_arguments,
+    _check_pandas_installed,
+    _check_time_format,
+    _convert_times,
+    _ensure_events,
+    _freq_mask,
+    _import_h5io_funcs,
+    _is_numeric,
+    _pl,
+    _prepare_read_metadata,
+    _prepare_write_metadata,
+    _time_mask,
+    _validate_type,
+    check_fname,
+    copy_doc,
+    copy_function_doc_to_method_doc,
+    fill_doc,
+    legacy,
+    logger,
+    object_diff,
+    repr_html,
+    sizeof_fmt,
+    verbose,
+    warn,
+)
+from ..utils.spectrum import _get_instance_type_string
+from ..viz.topo import _imshow_tfr, _imshow_tfr_unified, _plot_topo
+from ..viz.topomap import (
+    _add_colorbar,
+    _get_pos_outlines,
+    _set_contour_locator,
+    plot_tfr_topomap,
+    plot_topomap,
+)
+from ..viz.utils import (
+    _make_combine_callable,
+    _prepare_joint_axes,
+    _set_title_multiple_electrodes,
+    _setup_cmap,
+    _setup_vmin_vmax,
+    add_background_image,
+    figure_nobar,
+    plt_show,
+)
+from .multitaper import dpss_windows, tfr_array_multitaper
+from .spectrum import EpochsSpectrum
+
+
+@fill_doc
+def morlet(sfreq, freqs, n_cycles=7.0, sigma=None, zero_mean=False):
+    """Compute Morlet wavelets for the given frequency range.
+
+    Parameters
+    ----------
+    sfreq : float
+        The sampling Frequency.
+    freqs : float | array-like, shape (n_freqs,)
+        Frequencies to compute Morlet wavelets for.
+    n_cycles : float | array-like, shape (n_freqs,)
+        Number of cycles. Can be a fixed number (float) or one per frequency
+        (array-like).
+    sigma : float, default None
+        It controls the width of the wavelet ie its temporal
+        resolution. If sigma is None the temporal resolution
+        is adapted with the frequency like for all wavelet transform.
+        The higher the frequency the shorter is the wavelet.
+        If sigma is fixed the temporal resolution is fixed
+        like for the short time Fourier transform and the number
+        of oscillations increases with the frequency.
+    zero_mean : bool, default False
+        Make sure the wavelet has a mean of zero.
+
+    Returns
+    -------
+    Ws : list of ndarray | ndarray
+        The wavelets time series. If ``freqs`` was a float, a single
+        ndarray is returned instead of a list of ndarray.
+
+    See Also
+    --------
+    mne.time_frequency.fwhm
+
+    Notes
+    -----
+    %(morlet_reference)s
+    %(fwhm_morlet_notes)s
+
+    References
+    ----------
+    .. footbibliography::
+
+    Examples
+    --------
+    Let's show a simple example of the relationship between ``n_cycles`` and
+    the FWHM using :func:`mne.time_frequency.fwhm`:
+
+    .. plot::
+
+        import numpy as np
+        import matplotlib.pyplot as plt
+        from mne.time_frequency import morlet, fwhm
+
+        sfreq, freq, n_cycles = 1000., 10, 7  # i.e., 700 ms
+        this_fwhm = fwhm(freq, n_cycles)
+        wavelet = morlet(sfreq=sfreq, freqs=freq, n_cycles=n_cycles)
+        M, w = len(wavelet), n_cycles # convert to SciPy convention
+        s = w * sfreq / (2 * freq * np.pi)  # from SciPy docs
+
+        _, ax = plt.subplots(layout="constrained")
+        colors = dict(real="#66CCEE", imag="#EE6677")
+        t = np.arange(-M // 2 + 1, M // 2 + 1) / sfreq
+        for kind in ('real', 'imag'):
+            ax.plot(
+                t, getattr(wavelet, kind), label=kind, color=colors[kind],
+            )
+        ax.plot(t, np.abs(wavelet), label=f'abs', color='k', lw=1., zorder=6)
+        half_max = np.max(np.abs(wavelet)) / 2.
+        ax.plot([-this_fwhm / 2., this_fwhm / 2.], [half_max, half_max],
+                color='k', linestyle='-', label='FWHM', zorder=6)
+        ax.legend(loc='upper right')
+        ax.set(xlabel='Time (s)', ylabel='Amplitude')
+    """  # noqa: E501
+    Ws = list()
+    n_cycles = np.array(n_cycles, float).ravel()
+
+    freqs = np.array(freqs, float)
+    if np.any(freqs <= 0):
+        raise ValueError("all frequencies in 'freqs' must be greater than
+<output_tail>
+a"].ndim == 4
+        is_average = "nave" in tfr
+        if condition is not None:
+            if not is_average:
+                raise NotImplementedError(
+                    "condition is only supported when reading AverageTFRs."
+                )
+            if key != condition:
+                continue
+        tfr = dict(tfr)
+        tfr["info"] = Info(tfr["info"])
+        tfr["info"]._check_consistency()
+        if "metadata" in tfr:
+            tfr["metadata"] = _prepare_read_metadata(tfr["metadata"])
+        # additional keys needed for TFR __setstate__
+        defaults = dict(baseline=None, data_type="Power Estimates")
+        if is_epochs:
+            Klass = EpochsTFR
+            defaults.update(
+                inst_type_str="Epochs", dims=("epoch", "channel", "freq", "time")
+            )
+        elif is_average:
+            Klass = AverageTFR
+            defaults.update(inst_type_str="Evoked", dims=("channel", "freq", "time"))
+        else:
+            Klass = RawTFR
+            defaults.update(inst_type_str="Raw", dims=("channel", "freq", "time"))
+        out.append(Klass(inst=defaults | tfr))
+    if len(out) == 0:
+        raise ValueError(
+            f'Cannot find condition "{condition}" in this file. '
+            f'The file contains conditions {", ".join(keys)}'
+        )
+    if len(out) == 1:
+        out = out[0]
+    return out
+
+
+def _get_timefreqs(tfr, timefreqs):
+    """Find and/or setup timefreqs for `tfr.plot_joint`."""
+    # Input check
+    timefreq_error_msg = (
+        "Supplied `timefreqs` are somehow malformed. Please supply None, "
+        "a list of tuple pairs, or a dict of such tuple pairs, not {}"
+    )
+    if isinstance(timefreqs, dict):
+        for k, v in timefreqs.items():
+            for item in (k, v):
+                if len(item) != 2 or any(not _is_numeric(n) for n in item):
+                    raise ValueError(timefreq_error_msg, item)
+    elif timefreqs is not None:
+        if not hasattr(timefreqs, "__len__"):
+            raise ValueError(timefreq_error_msg.format(timefreqs))
+        if len(timefreqs) == 2 and all(_is_numeric(v) for v in timefreqs):
+            timefreqs = [tuple(timefreqs)]  # stick a pair of numbers in a list
+        else:
+            for item in timefreqs:
+                if (
+                    hasattr(item, "__len__")
+                    and len(item) == 2
+                    and all(_is_numeric(n) for n in item)
+                ):
+                    pass
+                else:
+                    raise ValueError(timefreq_error_msg.format(item))
+
+    # If None, automatic identification of max peak
+    else:
+        order = max((1, tfr.data.shape[2] // 30))
+        peaks_idx = argrelmax(tfr.data, order=order, axis=2)
+        if peaks_idx[0].size == 0:
+            _, p_t, p_f = np.unravel_index(tfr.data.argmax(), tfr.data.shape)
+            timefreqs = [(tfr.times[p_t], tfr.freqs[p_f])]
+        else:
+            peaks = [tfr.data[0, f, t] for f, t in zip(peaks_idx[1], peaks_idx[2])]
+            peakmax_idx = np.argmax(peaks)
+            peakmax_time = tfr.times[peaks_idx[2][peakmax_idx]]
+            peakmax_freq = tfr.freqs[peaks_idx[1][peakmax_idx]]
+
+            timefreqs = [(peakmax_time, peakmax_freq)]
+
+    timefreqs = {
+        tuple(k): np.asarray(timefreqs[k])
+        if isinstance(timefreqs, dict)
+        else np.array([0, 0])
+        for k in timefreqs
+    }
+
+    return timefreqs
+
+
+def _check_tfr_complex(tfr, reason="source space estimation"):
+    """Check that time-frequency epochs or average data is complex."""
+    if not np.iscomplexobj(tfr.data):
+        raise RuntimeError(f"Time-frequency data must be complex for {reason}")
+
+
+def _merge_if_grads(data, info, ch_type, sphere, combine=None):
+    if ch_type == "grad":
+        grad_picks = _pair_grad_sensors(info, topomap_coords=False)
+        pos = _find_topomap_coords(info, picks=grad_picks[::2], sphere=sphere)
+        grad_method = combine if isinstance(combine, str) else "rms"
+        data, _ = _merge_ch_data(data[grad_picks], ch_type, [], method=grad_method)
+    else:
+        pos, _ = _get_pos_outlines(info, picks=ch_type, sphere=sphere)
+    return data, pos
+
+
+@verbose
+def _prep_data_for_plot(
+    data,
+    times,
+    freqs,
+    *,
+    tmin=None,
+    tmax=None,
+    fmin=None,
+    fmax=None,
+    baseline=None,
+    mode=None,
+    dB=False,
+    verbose=None,
+):
+    # baseline
+    copy = baseline is not None
+    data = rescale(data, times, baseline, mode, copy=copy, verbose=verbose)
+    # crop times
+    time_mask = np.nonzero(_time_mask(times, tmin, tmax))[0]
+    times = times[time_mask]
+    # crop freqs
+    freq_mask = np.nonzero(_time_mask(freqs, fmin, fmax))[0]
+    freqs = freqs[freq_mask]
+    # crop data
+    data = data[..., freq_mask, :][..., time_mask]
+    # complex amplitude → real power; real-valued data is already power (or ITC)
+    if np.iscomplexobj(data):
+        data = (data * data.conj()).real
+    if dB:
+        data = 10 * np.log10(data)
+    return data, times, freqs
+
+<elided_chars>
+129265
+<warning>
+Output too long.
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 2, $0.00):
+ Let me search for the relevant code related to multitaper and taper weighting:
+
+```
+grep -n "taper" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py | head -50
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+81:from .multitaper import dpss_windows, tfr_array_multitaper
+243:    """Compute DPSS tapers for the given frequency range.
+255:        The number of good tapers (low-bias) is chosen automatically based on
+257:        Default is 4.0, giving 3 good tapers.
+275:        raise ValueError("time_bandwidth should be >= 2.0 for good tapers")
+292:            # Making sure wavelets are centered before tapering
+295:            # Get dpss tapers
+296:            tapers, conc = dpss_windows(
+300:            Wk = oscillation * tapers[m]
+445:    method : 'multitaper' | 'morlet', default 'morlet'
+447:        'multitaper' uses complex exponentials windowed with multiple DPSS
+448:        tapers.
+453:        None means True for method='multitaper' and False for method='morlet'.
+456:        If None and method=multitaper, will be set to 4.0 (3 tapers).
+458:        method == 'multitaper'. The number of good tapers (low-bias) is
+493:        However, using multitaper method and output ``'complex'`` or
+495:        n_tapers, n_freqs, n_times)``. If output is ``'avg_power_itc'``, the
+531:        Ws = [W]  # to have same dimensionality as the 'multitaper' case
+533:    elif method == "multitaper":
+551:    n_tapers = len(Ws)
+562:    elif output in ["complex", "phase"] and method == "multitaper":
+563:        out = np.empty((n_chans, n_tapers, n_epochs, n_freqs, n_times), dtype)
+584:        if output in ["complex", "phase"] and method == "multitaper":
+610:    # Default zero_mean = True if multitaper else False
+611:    zero_mean = method == "multitaper" if zero_mean is None else zero_mean
+635:        raise ValueError('time_bandwidth only applies to "multitaper" method.')
+636:    elif method == "multitaper":
+656:    _check_option("method", method, ["multitaper", "morlet"])
+670:    Ws : list, shape (n_tapers, n_wavelets, n_times)
+689:        Used only for multitapering to create tapers dimension in the output
+699:    n_tapers = len(Ws)
+704:    elif output in ["complex", "phase"] and method == "multitaper":
+705:        tfrs = np.zeros((n_tapers, n_epochs, n_freqs, n_times), dtype=dtype)
+709:    # Loops across tapers.
+710:    for taper_idx, W in enumerate(Ws):
+715:        # Inter-trial phase locking is apparently computed per taper...
+737:            elif output in ["complex", "phase"] and method == "multitaper":
+738:                tfrs[taper_idx, epoch_idx] += tfr
+752:    # Normalization by number of taper
+753:    if n_tapers > 1 and output not in ["complex", "phase"]:
+754:        tfrs /= n_tapers
+887:    mne.time_frequency.tfr_multitaper
+888:    mne.time_frequency.tfr_array_multitaper
+984:    mne.time_frequency.tfr_multitaper
+985:    mne.time_frequency.tfr_array_multitaper
+1017:@legacy(alt='.compute_tfr(method="multitaper")')
+1019:def tfr_multitaper(
+1033:    """Compute Time-Frequency Representation (TFR) using DPSS tapers.
+1035:    Same computation as :func:`~mne.time_frequency.tfr_array_multitaper`, but
+1067:    mne.time_frequency.tfr_array_multitaper
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 3, $0.00):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py | sed -n '700,760p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   700      n_epochs, n_times = X[:, decim].shape
+   701      n_freqs = len(Ws[0])
+   702      if ("avg_" in output) or ("itc" in output):
+   703          tfrs = np.zeros((n_freqs, n_times), dtype=dtype)
+   704      elif output in ["complex", "phase"] and method == "multitaper":
+   705          tfrs = np.zeros((n_tapers, n_epochs, n_freqs, n_times), dtype=dtype)
+   706      else:
+   707          tfrs = np.zeros((n_epochs, n_freqs, n_times), dtype=dtype)
+   708  
+   709      # Loops across tapers.
+   710      for taper_idx, W in enumerate(Ws):
+   711          # No need to check here, it's done earlier (outside parallel part)
+   712          nfft = _get_nfft(W, X, use_fft, check=False)
+   713          coefs = _cwt_gen(X, W, fsize=nfft, mode=mode, decim=decim, use_fft=use_fft)
+   714  
+   715          # Inter-trial phase locking is apparently computed per taper...
+   716          if "itc" in output:
+   717              plf = np.zeros((n_freqs, n_times), dtype=np.complex128)
+   718  
+   719          # Loop across epochs
+   720          for epoch_idx, tfr in enumerate(coefs):
+   721              # Transform complex values
+   722              if output in ["power", "avg_power"]:
+   723                  tfr = (tfr * tfr.conj()).real  # power
+   724              elif output == "phase":
+   725                  tfr = np.angle(tfr)
+   726              elif output == "avg_power_itc":
+   727                  tfr_abs = np.abs(tfr)
+   728                  plf += tfr / tfr_abs  # phase
+   729                  tfr = tfr_abs**2  # power
+   730              elif output == "itc":
+   731                  plf += tfr / np.abs(tfr)  # phase
+   732                  continue  # not need to stack anything else than plf
+   733  
+   734              # Stack or add
+   735              if ("avg_" in output) or ("itc" in output):
+   736                  tfrs += tfr
+   737              elif output in ["complex", "phase"] and method == "multitaper":
+   738                  tfrs[taper_idx, epoch_idx] += tfr
+   739              else:
+   740                  tfrs[epoch_idx] += tfr
+   741  
+   742          # Compute inter trial coherence
+   743          if output == "avg_power_itc":
+   744              tfrs += 1j * np.abs(plf)
+   745          elif output == "itc":
+   746              tfrs += np.abs(plf)
+   747  
+   748      # Normalization of average metrics
+   749      if ("avg_" in output) or ("itc" in output):
+   750          tfrs /= n_epochs
+   751  
+   752      # Normalization by number of taper
+   753      if n_tapers > 1 and output not in ["complex", "phase"]:
+   754          tfrs /= n_tapers
+   755      return tfrs
+   756  
+   757  
+   758  @fill_doc
+   759  def cwt(X, Ws, use_fft=True, mode="same", decim=1):
+   760      """Compute time-frequency decomposition with continuous wavelet transform.
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 4, $0.01):
+```
+cat /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/multitaper.py 2>/dev/null || find /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9 -name "multitaper.py"
+```
+
+Tool:
+<returncode>
+0
+<output>
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 5, $0.01):
+```
+ls -la /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/
+```
+
+Tool:
+<returncode>
+0
+<output>
+total 280
+drwx------    3 user  staff      96 May  2 03:11 .
+drwx------@ 171 user  staff    5472 May  2 03:11 ..
+-rw-r--r--    1 user  staff  139334 May  2 03:11 tfr.py
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 6, $0.01):
+```
+grep -n "dpss_windows" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py | head -20
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+81:from .multitaper import dpss_windows, tfr_array_multitaper
+296:            tapers, conc = dpss_windows(
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 7, $0.02):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py | sed -n '575,640p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   575          for channel in epoch_data.transpose(1, 0, 2)
+   576      )
+   577  
+   578      # FIXME: to avoid overheads we should use np.array_split()
+   579      for channel_idx, tfr in enumerate(tfrs):
+   580          out[channel_idx] = tfr
+   581  
+   582      if ("avg_" not in output) and ("itc" not in output):
+   583          # This is to enforce that the first dimension is for epochs
+   584          if output in ["complex", "phase"] and method == "multitaper":
+   585              out = out.transpose(2, 0, 1, 3, 4)
+   586          else:
+   587              out = out.transpose(1, 0, 2, 3)
+   588      return out
+   589  
+   590  
+   591  def _check_tfr_param(
+   592      freqs, sfreq, method, zero_mean, n_cycles, time_bandwidth, use_fft, decim, output
+   593  ):
+   594      """Aux. function to _compute_tfr to check the params validity."""
+   595      # Check freqs
+   596      if not isinstance(freqs, list | np.ndarray):
+   597          raise ValueError(f"freqs must be an array-like, got {type(freqs)} instead.")
+   598      freqs = np.asarray(freqs, dtype=float)
+   599      if freqs.ndim != 1:
+   600          raise ValueError(
+   601              f"freqs must be of shape (n_freqs,), got {np.array(freqs.shape)} "
+   602              "instead."
+   603          )
+   604  
+   605      # Check sfreq
+   606      if not isinstance(sfreq, float | int):
+   607          raise ValueError(f"sfreq must be a float or an int, got {type(sfreq)} instead.")
+   608      sfreq = float(sfreq)
+   609  
+   610      # Default zero_mean = True if multitaper else False
+   611      zero_mean = method == "multitaper" if zero_mean is None else zero_mean
+   612      if not isinstance(zero_mean, bool):
+   613          raise ValueError(
+   614              f"zero_mean should be of type bool, got {type(zero_mean)}. instead"
+   615          )
+   616      freqs = np.asarray(freqs)
+   617  
+   618      # Check n_cycles
+   619      if isinstance(n_cycles, int | float):
+   620          n_cycles = float(n_cycles)
+   621      elif isinstance(n_cycles, list | np.ndarray):
+   622          n_cycles = np.array(n_cycles)
+   623          if len(n_cycles) != len(freqs):
+   624              raise ValueError(
+   625                  "n_cycles must be a float or an array of length "
+   626                  f"{len(freqs)} frequencies, got {len(n_cycles)} cycles instead."
+   627              )
+   628      else:
+   629          raise ValueError(
+   630              f"n_cycles must be a float or an array, got {type(n_cycles)} instead."
+   631          )
+   632  
+   633      # Check time_bandwidth
+   634      if (method == "morlet") and (time_bandwidth is not None):
+   635          raise ValueError('time_bandwidth only applies to "multitaper" method.')
+   636      elif method == "multitaper":
+   637          time_bandwidth = 4.0 if time_bandwidth is None else float(time_bandwidth)
+   638  
+   639      # Check use_fft
+   640      if not isinstance(use_fft, bool):
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 8, $0.02):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py | sed -n '290,330p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   290              t_win = this_n_cycles / float(f)
+   291              t = np.arange(0.0, t_win, 1.0 / sfreq)
+   292              # Making sure wavelets are centered before tapering
+   293              oscillation = np.exp(2.0 * 1j * np.pi * f * (t - t_win / 2.0))
+   294  
+   295              # Get dpss tapers
+   296              tapers, conc = dpss_windows(
+   297                  t.shape[0], time_bandwidth / 2.0, n_taps, sym=False
+   298              )
+   299  
+   300              Wk = oscillation * tapers[m]
+   301              if zero_mean:  # to make it zero mean
+   302                  real_offset = Wk.mean()
+   303                  Wk -= real_offset
+   304              Wk /= np.sqrt(0.5) * np.linalg.norm(Wk.ravel())
+   305  
+   306              Wm.append(Wk)
+   307  
+   308          Ws.append(Wm)
+   309      if return_weights:
+   310          return Ws, conc
+   311      return Ws
+   312  
+   313  
+   314  # Low level convolution
+   315  
+   316  
+   317  def _get_nfft(wavelets, X, use_fft=True, check=True):
+   318      n_times = X.shape[-1]
+   319      max_size = max(w.size for w in wavelets)
+   320      if max_size > n_times:
+   321          msg = (
+   322              f"At least one of the wavelets ({max_size}) is longer than the "
+   323              f"signal ({n_times}). Consider using a longer signal or "
+   324              "shorter wavelets."
+   325          )
+   326          if check:
+   327              if use_fft:
+   328                  warn(msg, UserWarning)
+   329              else:
+   330                  raise ValueError(msg)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 9, $0.02):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py | sed -n '540,595p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   540          )
+   541  
+   542      # Check wavelets
+   543      if len(Ws[0][0]) > epoch_data.shape[2]:
+   544          raise ValueError(
+   545              "At least one of the wavelets is longer than the "
+   546              "signal. Use a longer signal or shorter wavelets."
+   547          )
+   548  
+   549      # Initialize output
+   550      n_freqs = len(freqs)
+   551      n_tapers = len(Ws)
+   552      n_epochs, n_chans, n_times = epoch_data[:, :, decim].shape
+   553      if output in ("power", "phase", "avg_power", "itc"):
+   554          dtype = np.float64
+   555      elif output in ("complex", "avg_power_itc"):
+   556          # avg_power_itc is stored as power + 1i * itc to keep a
+   557          # simple dimensionality
+   558          dtype = np.complex128
+   559  
+   560      if ("avg_" in output) or ("itc" in output):
+   561          out = np.empty((n_chans, n_freqs, n_times), dtype)
+   562      elif output in ["complex", "phase"] and method == "multitaper":
+   563          out = np.empty((n_chans, n_tapers, n_epochs, n_freqs, n_times), dtype)
+   564      else:
+   565          out = np.empty((n_chans, n_epochs, n_freqs, n_times), dtype)
+   566  
+   567      # Parallel computation
+   568      all_Ws = sum([list(W) for W in Ws], list())
+   569      _get_nfft(all_Ws, epoch_data, use_fft)
+   570      parallel, my_cwt, n_jobs = parallel_func(_time_frequency_loop, n_jobs)
+   571  
+   572      # Parallelization is applied across channels.
+   573      tfrs = parallel(
+   574          my_cwt(channel, Ws, output, use_fft, "same", decim, method)
+   575          for channel in epoch_data.transpose(1, 0, 2)
+   576      )
+   577  
+   578      # FIXME: to avoid overheads we should use np.array_split()
+   579      for channel_idx, tfr in enumerate(tfrs):
+   580          out[channel_idx] = tfr
+   581  
+   582      if ("avg_" not in output) and ("itc" not in output):
+   583          # This is to enforce that the first dimension is for epochs
+   584          if output in ["complex", "phase"] and method == "multitaper":
+   585              out = out.transpose(2, 0, 1, 3, 4)
+   586          else:
+   587              out = out.transpose(1, 0, 2, 3)
+   588      return out
+   589  
+   590  
+   591  def _check_tfr_param(
+   592      freqs, sfreq, method, zero_mean, n_cycles, time_bandwidth, use_fft, decim, output
+   593  ):
+   594      """Aux. function to _compute_tfr to check the params validity."""
+   595      # Check freqs
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 10, $0.03):
+```
+grep -n "conc" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+261:        Whether to return the concentration weights.
+296:            tapers, conc = dpss_windows(
+310:        return Ws, conc
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 11, $0.04):
+```
+grep -n -i "weight" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py | head -30
+```
+
+Tool:
+<returncode>
+0
+<output>
+241:    return_weights=False,
+260:    return_weights : bool
+261:        Whether to return the concentration weights.
+309:    if return_weights:
+3809:def combine_tfr(all_tfr, weights="nave"):
+3810:    """Merge AverageTFR data by weighted addition.
+3813:    instances as its data. By default, the mean (weighted by trials) is used.
+3814:    Subtraction can be performed by passing negative weights (e.g., [1, -1]).
+3821:    weights : list of float | str
+3822:        The weights to apply to the data of each AverageTFR instance.
+3823:        Can also be ``'nave'`` to weight according to tfr.nave,
+3824:        or ``'equal'`` to use equal weighting (each weighted as ``1/N``).
+3836:    if isinstance(weights, str):
+3837:        if weights not in ("nave", "equal"):
+3838:            raise ValueError('Weights must be a list of float, or "nave" or "equal"')
+3839:        if weights == "nave":
+3840:            weights = np.array([e.nave for e in all_tfr], float)
+3841:            weights /= weights.sum()
+3843:            weights = [1.0 / len(all_tfr)] * len(all_tfr)
+3844:    weights = np.array(weights, float)
+3845:    if weights.ndim != 1 or weights.size != len(all_tfr):
+3846:        raise ValueError("Weights must be the same size as all_tfr")
+3862:    tfr.data = sum(w * t_.data for w, t_ in zip(weights, all_tfr))
+3863:    tfr.nave = max(int(1.0 / sum(w**2 / e.nave for w, e in zip(weights, all_tfr))), 1)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 12, $0.04):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py | sed -n '665,760p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   665  
+   666      Parameters
+   667      ----------
+   668      X : array, shape (n_epochs, n_times)
+   669          The epochs data of a single channel.
+   670      Ws : list, shape (n_tapers, n_wavelets, n_times)
+   671          The wavelets.
+   672      output : str
+   673  
+   674          * 'complex' : single trial complex.
+   675          * 'power' : single trial power.
+   676          * 'phase' : single trial phase.
+   677          * 'avg_power' : average of single trial power.
+   678          * 'itc' : inter-trial coherence.
+   679          * 'avg_power_itc' : average of single trial power and inter-trial
+   680            coherence across trials.
+   681  
+   682      use_fft : bool
+   683          Use the FFT for convolutions or not.
+   684      mode : {'full', 'valid', 'same'}
+   685          See numpy.convolve.
+   686      decim : slice
+   687          The decimation slice: e.g. power[:, decim]
+   688      method : str | None
+   689          Used only for multitapering to create tapers dimension in the output
+   690          if ``output in ['complex', 'phase']``.
+   691      """
+   692      # Set output type
+   693      dtype = np.float64
+   694      if output in ["complex", "avg_power_itc"]:
+   695          dtype = np.complex128
+   696  
+   697      # Init outputs
+   698      decim = _ensure_slice(decim)
+   699      n_tapers = len(Ws)
+   700      n_epochs, n_times = X[:, decim].shape
+   701      n_freqs = len(Ws[0])
+   702      if ("avg_" in output) or ("itc" in output):
+   703          tfrs = np.zeros((n_freqs, n_times), dtype=dtype)
+   704      elif output in ["complex", "phase"] and method == "multitaper":
+   705          tfrs = np.zeros((n_tapers, n_epochs, n_freqs, n_times), dtype=dtype)
+   706      else:
+   707          tfrs = np.zeros((n_epochs, n_freqs, n_times), dtype=dtype)
+   708  
+   709      # Loops across tapers.
+   710      for taper_idx, W in enumerate(Ws):
+   711          # No need to check here, it's done earlier (outside parallel part)
+   712          nfft = _get_nfft(W, X, use_fft, check=False)
+   713          coefs = _cwt_gen(X, W, fsize=nfft, mode=mode, decim=decim, use_fft=use_fft)
+   714  
+   715          # Inter-trial phase locking is apparently computed per taper...
+   716          if "itc" in output:
+   717              plf = np.zeros((n_freqs, n_times), dtype=np.complex128)
+   718  
+   719          # Loop across epochs
+   720          for epoch_idx, tfr in enumerate(coefs):
+   721              # Transform complex values
+   722              if output in ["power", "avg_power"]:
+   723                  tfr = (tfr * tfr.conj()).real  # power
+   724              elif output == "phase":
+   725                  tfr = np.angle(tfr)
+   726              elif output == "avg_power_itc":
+   727                  tfr_abs = np.abs(tfr)
+   728                  plf += tfr / tfr_abs  # phase
+   729                  tfr = tfr_abs**2  # power
+   730              elif output == "itc":
+   731                  plf += tfr / np.abs(tfr)  # phase
+   732                  continue  # not need to stack anything else than plf
+   733  
+   734              # Stack or add
+   735              if ("avg_" in output) or ("itc" in output):
+   736                  tfrs += tfr
+   737              elif output in ["complex", "phase"] and method == "multitaper":
+   738                  tfrs[taper_idx, epoch_idx] += tfr
+   739              else:
+   740                  tfrs[epoch_idx] += tfr
+   741  
+   742          # Compute inter trial coherence
+   743          if output == "avg_power_itc":
+   744              tfrs += 1j * np.abs(plf)
+   745          elif output == "itc":
+   746              tfrs += np.abs(plf)
+   747  
+   748      # Normalization of average metrics
+   749      if ("avg_" in output) or ("itc" in output):
+   750          tfrs /= n_epochs
+   751  
+   752      # Normalization by number of taper
+   753      if n_tapers > 1 and output not in ["complex", "phase"]:
+   754          tfrs /= n_tapers
+   755      return tfrs
+   756  
+   757  
+   758  @fill_doc
+   759  def cwt(X, Ws, use_fft=True, mode="same", decim=1):
+   760      """Compute time-frequency decomposition with continuous wavelet transform.
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 13, $0.04):
+```
+grep -n "tfr_array_multitaper" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py | head -20
+```
+
+Tool:
+<returncode>
+0
+<output>
+81:from .multitaper import dpss_windows, tfr_array_multitaper
+888:    mne.time_frequency.tfr_array_multitaper
+985:    mne.time_frequency.tfr_array_multitaper
+1035:    Same computation as :func:`~mne.time_frequency.tfr_array_multitaper`, but
+1067:    mne.time_frequency.tfr_array_multitaper
+1209:            multitaper=tfr_array_multitaper,
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 14, $0.05):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py | sed -n '530,560p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   530          W = morlet(sfreq, freqs, n_cycles=n_cycles, zero_mean=zero_mean)
+   531          Ws = [W]  # to have same dimensionality as the 'multitaper' case
+   532  
+   533      elif method == "multitaper":
+   534          Ws = _make_dpss(
+   535              sfreq,
+   536              freqs,
+   537              n_cycles=n_cycles,
+   538              time_bandwidth=time_bandwidth,
+   539              zero_mean=zero_mean,
+   540          )
+   541  
+   542      # Check wavelets
+   543      if len(Ws[0][0]) > epoch_data.shape[2]:
+   544          raise ValueError(
+   545              "At least one of the wavelets is longer than the "
+   546              "signal. Use a longer signal or shorter wavelets."
+   547          )
+   548  
+   549      # Initialize output
+   550      n_freqs = len(freqs)
+   551      n_tapers = len(Ws)
+   552      n_epochs, n_chans, n_times = epoch_data[:, :, decim].shape
+   553      if output in ("power", "phase", "avg_power", "itc"):
+   554          dtype = np.float64
+   555      elif output in ("complex", "avg_power_itc"):
+   556          # avg_power_itc is stored as power + 1i * itc to keep a
+   557          # simple dimensionality
+   558          dtype = np.complex128
+   559  
+   560      if ("avg_" in output) or ("itc" in output):
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 15, $0.06):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py | sed -n '1,100p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+     1  """A module which implements the time-frequency estimation.
+     2  
+     3  Morlet code inspired by Matlab code from Sheraz Khan & Brainstorm & SPM
+     4  """
+     5  
+     6  # Authors: The MNE-Python contributors.
+     7  # License: BSD-3-Clause
+     8  # Copyright the MNE-Python contributors.
+     9  
+    10  import inspect
+    11  from copy import deepcopy
+    12  from functools import partial
+    13  
+    14  import matplotlib.pyplot as plt
+    15  import numpy as np
+    16  from scipy.fft import fft, ifft
+    17  from scipy.signal import argrelmax
+    18  
+    19  from .._fiff.meas_info import ContainsMixin, Info
+    20  from .._fiff.pick import _picks_to_idx, pick_info
+    21  from ..baseline import _check_baseline, rescale
+    22  from ..channels.channels import UpdateChannelsMixin
+    23  from ..channels.layout import _find_topomap_coords, _merge_ch_data, _pair_grad_sensors
+    24  from ..defaults import _BORDER_DEFAULT, _EXTRAPOLATE_DEFAULT, _INTERPOLATION_DEFAULT
+    25  from ..filter import next_fast_len
+    26  from ..parallel import parallel_func
+    27  from ..utils import (
+    28      ExtendedTimeMixin,
+    29      GetEpochsMixin,
+    30      SizeMixin,
+    31      _build_data_frame,
+    32      _check_combine,
+    33      _check_event_id,
+    34      _check_fname,
+    35      _check_method_kwargs,
+    36      _check_option,
+    37      _check_pandas_index_arguments,
+    38      _check_pandas_installed,
+    39      _check_time_format,
+    40      _convert_times,
+    41      _ensure_events,
+    42      _freq_mask,
+    43      _import_h5io_funcs,
+    44      _is_numeric,
+    45      _pl,
+    46      _prepare_read_metadata,
+    47      _prepare_write_metadata,
+    48      _time_mask,
+    49      _validate_type,
+    50      check_fname,
+    51      copy_doc,
+    52      copy_function_doc_to_method_doc,
+    53      fill_doc,
+    54      legacy,
+    55      logger,
+    56      object_diff,
+    57      repr_html,
+    58      sizeof_fmt,
+    59      verbose,
+    60      warn,
+    61  )
+    62  from ..utils.spectrum import _get_instance_type_string
+    63  from ..viz.topo import _imshow_tfr, _imshow_tfr_unified, _plot_topo
+    64  from ..viz.topomap import (
+    65      _add_colorbar,
+    66      _get_pos_outlines,
+    67      _set_contour_locator,
+    68      plot_tfr_topomap,
+    69      plot_topomap,
+    70  )
+    71  from ..viz.utils import (
+    72      _make_combine_callable,
+    73      _prepare_joint_axes,
+    74      _set_title_multiple_electrodes,
+    75      _setup_cmap,
+    76      _setup_vmin_vmax,
+    77      add_background_image,
+    78      figure_nobar,
+    79      plt_show,
+    80  )
+    81  from .multitaper import dpss_windows, tfr_array_multitaper
+    82  from .spectrum import EpochsSpectrum
+    83  
+    84  
+    85  @fill_doc
+    86  def morlet(sfreq, freqs, n_cycles=7.0, sigma=None, zero_mean=False):
+    87      """Compute Morlet wavelets for the given frequency range.
+    88  
+    89      Parameters
+    90      ----------
+    91      sfreq : float
+    92          The sampling Frequency.
+    93      freqs : float | array-like, shape (n_freqs,)
+    94          Frequencies to compute Morlet wavelets for.
+    95      n_cycles : float | array-like, shape (n_freqs,)
+    96          Number of cycles. Can be a fixed number (float) or one per frequency
+    97          (array-like).
+    98      sigma : float, default None
+    99          It controls the width of the wavelet ie its temporal
+   100          resolution. If sigma is None the temporal resolution
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 16, $0.06):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py | sed -n '240,320p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   240      zero_mean=False,
+   241      return_weights=False,
+   242  ):
+   243      """Compute DPSS tapers for the given frequency range.
+   244  
+   245      Parameters
+   246      ----------
+   247      sfreq : float
+   248          The sampling frequency.
+   249      freqs : ndarray, shape (n_freqs,)
+   250          The frequencies in Hz.
+   251      n_cycles : float | ndarray, shape (n_freqs,), default 7.
+   252          The number of cycles globally or for each frequency.
+   253      time_bandwidth : float, default 4.0
+   254          Time x Bandwidth product.
+   255          The number of good tapers (low-bias) is chosen automatically based on
+   256          this to equal floor(time_bandwidth - 1).
+   257          Default is 4.0, giving 3 good tapers.
+   258      zero_mean : bool | None, , default False
+   259          Make sure the wavelet has a mean of zero.
+   260      return_weights : bool
+   261          Whether to return the concentration weights.
+   262  
+   263      Returns
+   264      -------
+   265      Ws : list of array
+   266          The wavelets time series.
+   267      """
+   268      Ws = list()
+   269  
+   270      freqs = np.array(freqs)
+   271      if np.any(freqs <= 0):
+   272          raise ValueError("all frequencies in 'freqs' must be greater than 0.")
+   273  
+   274      if time_bandwidth < 2.0:
+   275          raise ValueError("time_bandwidth should be >= 2.0 for good tapers")
+   276      n_taps = int(np.floor(time_bandwidth - 1))
+   277      n_cycles = np.atleast_1d(n_cycles)
+   278  
+   279      if n_cycles.size != 1 and n_cycles.size != len(freqs):
+   280          raise ValueError("n_cycles should be fixed or defined for each frequency.")
+   281  
+   282      for m in range(n_taps):
+   283          Wm = list()
+   284          for k, f in enumerate(freqs):
+   285              if len(n_cycles) != 1:
+   286                  this_n_cycles = n_cycles[k]
+   287              else:
+   288                  this_n_cycles = n_cycles[0]
+   289  
+   290              t_win = this_n_cycles / float(f)
+   291              t = np.arange(0.0, t_win, 1.0 / sfreq)
+   292              # Making sure wavelets are centered before tapering
+   293              oscillation = np.exp(2.0 * 1j * np.pi * f * (t - t_win / 2.0))
+   294  
+   295              # Get dpss tapers
+   296              tapers, conc = dpss_windows(
+   297                  t.shape[0], time_bandwidth / 2.0, n_taps, sym=False
+   298              )
+   299  
+   300              Wk = oscillation * tapers[m]
+   301              if zero_mean:  # to make it zero mean
+   302                  real_offset = Wk.mean()
+   303                  Wk -= real_offset
+   304              Wk /= np.sqrt(0.5) * np.linalg.norm(Wk.ravel())
+   305  
+   306              Wm.append(Wk)
+   307  
+   308          Ws.append(Wm)
+   309      if return_weights:
+   310          return Ws, conc
+   311      return Ws
+   312  
+   313  
+   314  # Low level convolution
+   315  
+   316  
+   317  def _get_nfft(wavelets, X, use_fft=True, check=True):
+   318      n_times = X.shape[-1]
+   319      max_size = max(w.size for w in wavelets)
+   320      if max_size > n_times:
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 17, $0.07):
+```
+grep -n -A 30 "def tfr_array_multitaper" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/multitaper.py 2>/dev/null || grep -rn "tfr_array_multitaper" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/ 2>/dev/null
+```
+
+Tool:
+<returncode>
+0
+<output>
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py:81:from .multitaper import dpss_windows, tfr_array_multitaper
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py:888:    mne.time_frequency.tfr_array_multitaper
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py:985:    mne.time_frequency.tfr_array_multitaper
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py:1035:    Same computation as :func:`~mne.time_frequency.tfr_array_multitaper`, but
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py:1067:    mne.time_frequency.tfr_array_multitaper
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py:1209:            multitaper=tfr_array_multitaper,
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 18, $0.07):
+```
+grep -n "conc" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+261:        Whether to return the concentration weights.
+296:            tapers, conc = dpss_windows(
+310:        return Ws, conc
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 19, $0.08):
+```
+grep -n "concentration" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+261:        Whether to return the concentration weights.
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 20, $0.09):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpt3xl0gd9/tfr.py | sed -n '510,600p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   510          sfreq,
+   511          method,
+   512          zero_mean,
+   513          n_cycles,
+   514          time_bandwidth,
+   515          use_fft,
+   516          decim,
+   517          output,
+   518      )
+   519  
+   520      decim = _ensure_slice(decim)
+   521      if (freqs > sfreq / 2.0).any():
+   522          raise ValueError(
+   523              "Cannot compute freq above Nyquist freq of the data "
+   524              f"({sfreq / 2.0:0.1f} Hz), got {freqs.max():0.1f} Hz"
+   525          )
+   526  
+   527      # We decimate *after* decomposition, so we need to create our kernels
+   528      # for the original sfreq
+   529      if method == "morlet":
+   530          W = morlet(sfreq, freqs, n_cycles=n_cycles, zero_mean=zero_mean)
+   531          Ws = [W]  # to have same dimensionality as the 'multitaper' case
+   532  
+   533      elif method == "multitaper":
+   534          Ws = _make_dpss(
+   535              sfreq,
+   536              freqs,
+   537              n_cycles=n_cycles,
+   538              time_bandwidth=time_bandwidth,
+   539              zero_mean=zero_mean,
+   540          )
+   541  
+   542      # Check wavelets
+   543      if len(Ws[0][0]) > epoch_data.shape[2]:
+   544          raise ValueError(
+   545              "At least one of the wavelets is longer than the "
+   546              "signal. Use a longer signal or shorter wavelets."
+   547          )
+   548  
+   549      # Initialize output
+   550      n_freqs = len(freqs)
+   551      n_tapers = len(Ws)
+   552      n_epochs, n_chans, n_times = epoch_data[:, :, decim].shape
+   553      if output in ("power", "phase", "avg_power", "itc"):
+   554          dtype = np.float64
+   555      elif output in ("complex", "avg_power_itc"):
+   556          # avg_power_itc is stored as power + 1i * itc to keep a
+   557          # simple dimensionality
+   558          dtype = np.complex128
+   559  
+   560      if ("avg_" in output) or ("itc" in output):
+   561          out = np.empty((n_chans, n_freqs, n_times), dtype)
+   562      elif output in ["complex", "phase"] and method == "multitaper":
+   563          out = np.empty((n_chans, n_tapers, n_epochs, n_freqs, n_times), dtype)
+   564      else:
+   565          out = np.empty((n_chans, n_epochs, n_freqs, n_times), dtype)
+   566  
+   567      # Parallel computation
+   568      all_Ws = sum([list(W) for W in Ws], list())
+   569      _get_nfft(all_Ws, epoch_data, use_fft)
+   570      parallel, my_cwt, n_jobs = parallel_func(_time_frequency_loop, n_jobs)
+   571  
+   572      # Parallelization is applied across channels.
+   573      tfrs = parallel(
+   574          my_cwt(channel, Ws, output, use_fft, "same", decim, method)
+   575          for channel in epoch_data.transpose(1, 0, 2)
+   576      )
+   577  
+   578      # FIXME: to avoid overheads we should use np.array_split()
+   579      for channel_idx, tfr in enumerate(tfrs):
+   580          out[channel_idx] = tfr
+   581  
+   582      if ("avg_" not in output) and ("itc" not in output):
+   583          # This is to enforce that the first dimension is for epochs
+   584          if output in ["complex", "phase"] and method == "multitaper":
+   585              out = out.transpose(2, 0, 1, 3, 4)
+   586          else:
+   587              out = out.transpose(1, 0, 2, 3)
+   588      return out
+   589  
+   590  
+   591  def _check_tfr_param(
+   592      freqs, sfreq, method, zero_mean, n_cycles, time_bandwidth, use_fft, decim, output
+   593  ):
+   594      """Aux. function to _compute_tfr to check the params validity."""
+   595      # Check freqs
+   596      if not isinstance(freqs, list | np.ndarray):
+   597          raise ValueError(f"freqs must be an array-like, got {type(freqs)} instead.")
+   598      freqs = np.asarray(freqs, dtype=float)
+   599      if freqs.ndim != 1:
+   600          raise ValueError(
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 21, $0.10):
+```
+find /opt/miniconda3 -name "multitaper.py" 2>/dev/null | xargs grep -l "dpss_windows" 2>/dev/null | head -1 | xargs cat 2>/dev/null || echo "File not found"
+```
+
+Tool:
+<returncode>
+0
+<output>
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Limits exceeded. Limits: 0 steps, $0.1.
+Current spend: 21 steps, $0.10.
+New step limit: 
+=== STDERR ===

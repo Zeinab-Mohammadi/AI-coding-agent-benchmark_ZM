@@ -1,0 +1,1757 @@
+=== STDOUT ===
+👋 This is mini-swe-agent version 2.2.8.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/Users/user/Library/Application Support/mini-swe-agent/.env'
+Building agent config from specs: 
+['/Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/config/mini.yaml']
+
+System:
+You are a helpful assistant that can interact with a computer.
+
+User:
+Please solve this issue: Fix the bug in the file /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py.
+
+Context: This bug is in MNE-Python's artifact rejection pipeline. Artifact rejection removes noise from muscle movements, eye
+blinks, and bad electrodes. ICA (Independent Component Analysis) separates brain signals from artifacts. Bugs here mean 
+artifact contamination survives into cleaned data.
+
+The file is from the MNE-Python neuroscience library (PR #13478: FIX: Fix ICA.apply when fitted including marked bad 
+channels).
+Read the file, identify the bug, and fix it in place. Only modify 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py. Do not install packages or run tests.
+
+You can execute bash commands and edit files to implement the necessary changes.
+
+## Recommended Workflow
+
+This workflow should be done step-by-step so that you can iterate on your changes and any possible problems.
+
+1. Analyze the codebase by finding and reading relevant files
+2. Create a script to reproduce the issue
+3. Edit the source code to resolve the issue
+4. Verify your fix works by running your script again
+5. Test edge cases to ensure your fix is robust
+6. Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+   Do not combine it with any other command. <important>After this command, you cannot continue working on this 
+task.</important>
+
+## Command Execution Rules
+
+You are operating in an environment where
+
+1. You issue at least one command
+2. The system executes the command(s) in a subshell
+3. You see the result(s)
+4. You write your next command(s)
+
+Each response should include:
+
+1. **Reasoning text** where you explain your analysis and plan
+2. At least one tool call with your command
+
+**CRITICAL REQUIREMENTS:**
+
+- Your response SHOULD include reasoning text explaining what you're doing
+- Your response MUST include AT LEAST ONE bash tool call
+- Directory or environment variable changes are not persistent. Every action is executed in a new subshell.
+- However, you can prefix any action with `MY_ENV_VAR=MY_VALUE cd /path/to/working/dir && ...` or write/load environment 
+variables from files
+- Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+  Do not combine it with any other command. <important>After this command, you cannot continue working on this 
+task.</important>
+
+Example of a CORRECT response:
+<example_response>
+I need to understand the structure of the repository first. Let me check what files are in the current directory to get a 
+better understanding of the codebase.
+
+[Makes bash tool call with {"command": "ls -la"} as arguments]
+</example_response>
+
+<system_information>
+Darwin 25.4.0 Darwin Kernel Version 25.4.0: Thu Mar 19 19:30:44 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6000 x86_64
+</system_information>
+
+## Useful command examples
+
+### Create a new file:
+
+```bash
+cat <<'EOF' > newfile.py
+import numpy as np
+hello = "world"
+print(hello)
+EOF
+```
+
+### Edit files with sed:<important>
+You are on MacOS. For all the below examples, you need to use `sed -i ''` instead of `sed -i`.
+</important>```bash
+# Replace all occurrences
+sed -i 's/old_string/new_string/g' filename.py
+
+# Replace only first occurrence
+sed -i 's/old_string/new_string/' filename.py
+
+# Replace first occurrence on line 1
+sed -i '1s/old_string/new_string/' filename.py
+
+# Replace all occurrences in lines 1-10
+sed -i '1,10s/old_string/new_string/g' filename.py
+```
+
+### View file content:
+
+```bash
+# View specific lines with numbers
+nl -ba filename.py | sed -n '10,20p'
+```
+
+### Any other command you want to run
+
+```bash
+anything
+```
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 1, $0.00):
+```
+cat /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py
+```
+
+Tool:
+<returncode>
+0
+<output_head>
+#
+# Authors: The MNE-Python contributors.
+# License: BSD-3-Clause
+# Copyright the MNE-Python contributors.
+
+from __future__ import annotations  # only needed for Python ≤ 3.9
+
+import json
+import math
+import warnings
+from collections import namedtuple
+from collections.abc import Sequence
+from copy import deepcopy
+from dataclasses import dataclass, is_dataclass
+from inspect import Parameter, isfunction, signature
+from numbers import Integral
+from time import time
+from typing import Literal
+
+import numpy as np
+from scipy import stats
+from scipy.spatial import distance
+from scipy.special import expit
+
+from .._fiff.constants import FIFF
+from .._fiff.meas_info import ContainsMixin, read_meas_info, write_meas_info
+from .._fiff.open import fiff_open
+from .._fiff.pick import (
+    _DATA_CH_TYPES_SPLIT,
+    _contains_ch_type,
+    _picks_by_type,
+    _picks_to_idx,
+    pick_channels,
+    pick_channels_regexp,
+    pick_info,
+    pick_types,
+)
+from .._fiff.proj import make_projector
+from .._fiff.tag import read_tag
+from .._fiff.tree import dir_tree_find
+from .._fiff.write import (
+    end_block,
+    start_and_end_file,
+    start_block,
+    write_double_matrix,
+    write_id,
+    write_int,
+    write_name_list,
+    write_string,
+)
+from ..channels.layout import _find_topomap_coords
+from ..cov import Covariance, compute_whitener
+from ..defaults import _BORDER_DEFAULT, _EXTRAPOLATE_DEFAULT, _INTERPOLATION_DEFAULT
+from ..epochs import BaseEpochs
+from ..evoked import Evoked
+from ..filter import filter_data
+from ..fixes import _safe_svd
+from ..html_templates import _get_html_template
+from ..io import BaseRaw
+from ..io.eeglab.eeglab import _check_load_mat, _get_info
+from ..utils import (
+    _PCA,
+    Bunch,
+    _check_all_same_channel_names,
+    _check_ch_locs,
+    _check_compensation_grade,
+    _check_fname,
+    _check_on_missing,
+    _check_option,
+    _check_preload,
+    _ensure_int,
+    _get_inst_data,
+    _on_missing,
+    _pl,
+    _reject_data_segments,
+    _require_version,
+    _validate_type,
+    check_fname,
+    check_random_state,
+    compute_corr,
+    copy_function_doc_to_method_doc,
+    fill_doc,
+    int_like,
+    logger,
+    pinv,
+    repr_html,
+    verbose,
+    warn,
+)
+from ..viz import (
+    plot_ica_components,
+    plot_ica_overlay,
+    plot_ica_scores,
+    plot_ica_sources,
+)
+from ..viz.ica import plot_ica_properties
+from ..viz.topomap import _plot_corrmap
+from .bads import _find_outliers
+from .ctps_ import ctps
+from .ecg import _get_ecg_channel_index, _make_ecg, create_ecg_epochs, qrs_detector
+from .eog import _find_eog_events, _get_eog_channel_index
+from .infomax_ import infomax
+
+__all__ = (
+    "ICA",
+    "ica_find_ecg_events",
+    "ica_find_eog_events",
+    "get_score_funcs",
+    "read_ica",
+    "read_ica_eeglab",
+)
+
+
+def _make_xy_sfunc(func, ndim_output=False):
+    """Aux function."""
+
+    def sfunc(x, y, ndim_output=ndim_output):
+        out = [func(a, y.ravel()) for a in x]
+        if len(out) and is_dataclass(out[0]):  # PermutationTestResult
+            out = [(o.statistic, o.pvalue) for o in out]
+        if ndim_output:
+            out = np.array(out)[:, 0]
+        return out
+
+    sfunc.__name__ = ".".join(["score_func", func.__module__, func.__name__])
+    sfunc.__doc__ = func.__doc__
+    return sfunc
+
+
+# Violate our assumption that the output is 1D so can't be used.
+# Could eventually be added but probably not worth the effort unless someone
+# requests it.
+_BLOCKLIST = {"somersd"}
+
+
+# makes score funcs attr accessible for users
+def get_score_funcs():
+    """Get the score functions.
+
+    Returns
+    -------
+    score_funcs : dict
+        The score functions.
+    """
+    score_funcs = Bunch()
+    xy_arg_dist_funcs = [
+        (n, f)
+        for n, f in vars(distance).items()
+        if isfunction(f) and not n.startswith("_") and n not in _BLOCKLIST
+    ]
+    xy_arg_stats_funcs = [
+        (n, f)
+        for n, f in vars(stats).items()
+        if isfunction(f) and not n.startswith("_") and n not in _BLOCKLIST
+    ]
+    score_funcs.update(
+        {
+            n: _make_xy_sfunc(f)
+            for n, f in xy_arg_dist_funcs
+            if signature(f).parameters == ["u", "v"]
+        }
+    )
+    # In SciPy 1.9+, pearsonr has (x, y, *, alternative='two-sided'), so we
+    # should just look at the positional_only and positional_or_keyword entries
+    for n, f in xy_arg_stats_funcs:
+        params = [
+            name
+            for name, param in signature(f).parameters.items()
+            if param.kind
+            in (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD)
+        ]
+        if params == ["x", "y"]:
+            score_funcs.update({n: _make_xy_sfunc(f, ndim_output=True)})
+    assert "pearsonr" in score_funcs
+    return score_funcs
+
+
+def _check_for_unsupported_ica_channels(picks, info, allow_ref_meg=False):
+    """Check for channels in picks that are not considered valid channels.
+
+    Accepted channels are the data channels
+    ('seeg', 'dbs', 'ecog', 'eeg', 'hbo', 'hbr', 'mag', and 'gr
+<output_tail>
+             sphere=sphere,
+            )
+        template_fig.canvas.draw()
+
+    # first run: use user-selected map
+    threshold = np.atleast_1d(np.array(threshold, float)).ravel()
+    threshold_err = (
+        "No component detected using when z-scoring "
+        f"threshold{threshold_extra} {threshold}, consider using a more lenient "
+        "threshold"
+    )
+    if len(all_maps) == 0:
+        raise RuntimeError(threshold_err)
+    paths = [_find_max_corrs(all_maps, target, t) for t in threshold]
+    # find iteration with highest avg correlation with target
+    new_target, _, _, _ = paths[np.argmax([path[2] for path in paths])]
+
+    # second run: use output from first run
+    if len(all_maps) == 0 or len(new_target) == 0:
+        raise RuntimeError(threshold_err)
+    paths = [_find_max_corrs(all_maps, new_target, t) for t in threshold]
+    del new_target
+    # find iteration with highest avg correlation with target
+    _, median_corr, _, max_corrs = paths[np.argmax([path[1] for path in paths])]
+
+    allmaps, indices, subjs, nones = (list() for _ in range(4))
+    logger.info(f"Median correlation with constructed map: {median_corr:0.3f}")
+    del median_corr
+    if plot is True:
+        logger.info("Displaying selected ICs per subject.")
+
+    for ii, (ica, max_corr) in enumerate(zip(icas, max_corrs)):
+        if len(max_corr) > 0:
+            if isinstance(max_corr[0], np.ndarray):
+                max_corr = max_corr[0]
+            if label is not None:
+                ica.labels_[label] = list(
+                    set(list(max_corr) + ica.labels_.get(label, list()))
+                )
+            if plot is True:
+                allmaps.extend(ica.get_components()[:, max_corr].T)
+                subjs.extend([ii] * len(max_corr))
+                indices.extend(max_corr)
+        else:
+            if (label is not None) and (label not in ica.labels_):
+                ica.labels_[label] = list()
+            nones.append(ii)
+
+    if len(nones) == 0:
+        logger.info("At least 1 IC detected for each subject.")
+    else:
+        logger.info(
+            f"No maps selected for subject{_pl(nones)} {nones}, "
+            "consider a more liberal threshold."
+        )
+
+    if plot is True:
+        labelled_ics = _plot_corrmap(
+            allmaps,
+            subjs,
+            indices,
+            ch_type,
+            ica,
+            label,
+            outlines=outlines,
+            cmap=cmap,
+            sensors=sensors,
+            contours=contours,
+            sphere=sphere,
+            image_interp=image_interp,
+            extrapolate=extrapolate,
+            border=border,
+            show=show,
+            show_names=show_names,
+        )
+        return template_fig, labelled_ics
+    else:
+        return None
+
+
+@verbose
+def read_ica_eeglab(fname, *, montage_units="auto", verbose=None):
+    """Load ICA information saved in an EEGLAB .set file.
+
+    Parameters
+    ----------
+    fname : path-like
+        Complete path to a ``.set`` EEGLAB file that contains an ICA object.
+    %(montage_units)s
+
+        .. versionadded:: 1.6
+    %(verbose)s
+
+    Returns
+    -------
+    ica : instance of ICA
+        An ICA object based on the information contained in the input file.
+    """
+    eeg = _check_load_mat(fname, None)
+    info, eeg_montage, _ = _get_info(eeg, eog=(), montage_units=montage_units)
+    info.set_montage(eeg_montage)
+    pick_info(info, np.round(eeg["icachansind"]).astype(int) - 1, copy=False)
+
+    rank = eeg.icasphere.shape[0]
+    n_components = eeg.icaweights.shape[0]
+
+    ica = ICA(method="imported_eeglab", n_components=n_components)
+
+    ica.current_fit = "eeglab"
+    ica.ch_names = info["ch_names"]
+    ica.n_pca_components = None
+    ica.n_components_ = n_components
+
+    n_ch = len(ica.ch_names)
+    assert len(eeg.icachansind) == n_ch
+
+    ica.pre_whitener_ = np.ones((n_ch, 1))
+    ica.pca_mean_ = np.zeros(n_ch)
+
+    assert eeg.icasphere.shape[1] == n_ch
+    assert eeg.icaweights.shape == (n_components, rank)
+
+    # When PCA reduction is used in EEGLAB, runica returns
+    # weights= weights*sphere*eigenvectors(:,1:ncomps)';
+    # sphere = eye(urchans). When PCA reduction is not used, we have:
+    #
+    #     eeg.icawinv == pinv(eeg.icaweights @ eeg.icasphere)
+    #
+    # So in either case, we can use SVD to get our square whitened
+    # weights matrix (u * s) and our PCA vectors (v) back:
+    use = eeg.icaweights @ eeg.icasphere
+    use_check = pinv(eeg.icawinv)
+    if not np.allclose(use, use_check, rtol=1e-6):
+        warn(
+            "Mismatch between icawinv and icaweights @ icasphere from EEGLAB "
+            "possibly due to ICA component removal, assuming icawinv is "
+            "correct"
+        )
+        use = use_check
+    u, s, v = _safe_svd(use, full_matrices=False)
+    ica.unmixing_matrix_ = u * s
+    ica.pca_components_ = v
+    ica.pca_explained_variance_ = s * s
+    ica.info = info
+    ica._update_mixing_matrix()
+    ica._update_ica_names()
+    ica.reject_ = None
+    return ica
+
+<elided_chars>
+119714
+<warning>
+Output too long.
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 2, $0.00):
+ Let me look at specific parts of the file related to the `apply` method:
+
+```
+grep -n "def apply" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+2172:    def apply(
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 3, $0.01):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py | sed -n '2160,2280p'
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+  2160              threshold=threshold,
+  2161              start=start,
+  2162              stop=stop,
+  2163              l_freq=l_freq,
+  2164              h_freq=h_freq,
+  2165              prefix="eog",
+  2166              reject_by_annotation=reject_by_annotation,
+  2167              measure=measure,
+  2168          )
+  2169          return self.labels_["eog"], scores
+  2170  
+  2171      @verbose
+  2172      def apply(
+  2173          self,
+  2174          inst,
+  2175          include=None,
+  2176          exclude=None,
+  2177          n_pca_components=None,
+  2178          start=None,
+  2179          stop=None,
+  2180          *,
+  2181          on_baseline="warn",
+  2182          verbose=None,
+  2183      ):
+  2184          """Remove selected components from the signal.
+  2185  
+  2186          Given the unmixing matrix, transform the data,
+  2187          zero out all excluded components, and inverse-transform the data.
+  2188          This procedure will reconstruct M/EEG signals from which
+  2189          the dynamics described by the excluded components is subtracted.
+  2190  
+  2191          Parameters
+  2192          ----------
+  2193          inst : instance of Raw, Epochs or Evoked
+  2194              The data to be processed (i.e., cleaned). It will be modified
+  2195              in-place.
+  2196          include : array_like of int
+  2197              The indices referring to columns in the ummixing matrix. The
+  2198              components to be kept. If ``None`` (default), all components
+  2199              will be included (minus those defined in ``ica.exclude``
+  2200              and the ``exclude`` parameter, see below).
+  2201          exclude : array_like of int
+  2202              The indices referring to columns in the ummixing matrix. The
+  2203              components to be zeroed out. If ``None`` (default) or an
+  2204              empty list, only components from ``ica.exclude`` will be
+  2205              excluded. Else, the union of ``exclude`` and ``ica.exclude``
+  2206              will be excluded.
+  2207          %(n_pca_components_apply)s
+  2208          start : int | float | None
+  2209              First sample to include. If float, data will be interpreted as
+  2210              time in seconds. If None, data will be used from the first sample.
+  2211          stop : int | float | None
+  2212              Last sample to not include. If float, data will be interpreted as
+  2213              time in seconds. If None, data will be used to the last sample.
+  2214          %(on_baseline_ica)s
+  2215          %(verbose)s
+  2216  
+  2217          Returns
+  2218          -------
+  2219          out : instance of Raw, Epochs or Evoked
+  2220              The processed data.
+  2221  
+  2222          Notes
+  2223          -----
+  2224          .. note:: Applying ICA may introduce a DC shift. If you pass
+  2225                    baseline-corrected `~mne.Epochs` or `~mne.Evoked` data,
+  2226                    the baseline period of the cleaned data may not be of
+  2227                    zero mean anymore. If you require baseline-corrected
+  2228                    data, apply baseline correction again after cleaning
+  2229                    via ICA. A warning will be emitted to remind you of this
+  2230                    fact if you pass baseline-corrected data.
+  2231  
+  2232          .. versionchanged:: 0.23
+  2233              Warn if instance was baseline-corrected.
+  2234          """
+  2235          _validate_type(
+  2236              inst, (BaseRaw, BaseEpochs, Evoked), "inst", "Raw, Epochs, or Evoked"
+  2237          )
+  2238          kwargs = dict(
+  2239              include=include, exclude=exclude, n_pca_components=n_pca_components
+  2240          )
+  2241          if isinstance(inst, BaseRaw):
+  2242              kind, meth = "Raw", self._apply_raw
+  2243              kwargs.update(raw=inst, start=start, stop=stop)
+  2244          elif isinstance(inst, BaseEpochs):
+  2245              kind, meth = "Epochs", self._apply_epochs
+  2246              kwargs.update(epochs=inst)
+  2247          else:  # isinstance(inst, Evoked):
+  2248              kind, meth = "Evoked", self._apply_evoked
+  2249              kwargs.update(evoked=inst)
+  2250          _check_compensation_grade(
+  2251              self.info, inst.info, "ICA", kind, ch_names=self.ch_names
+  2252          )
+  2253  
+  2254          _check_on_missing(on_baseline, "on_baseline", extras=("reapply",))
+  2255          reapply_baseline = False
+  2256          if isinstance(inst, BaseEpochs | Evoked):
+  2257              if getattr(inst, "baseline", None) is not None:
+  2258                  if on_baseline == "reapply":
+  2259                      reapply_baseline = True
+  2260                  else:
+  2261                      msg = (
+  2262                          "The data you passed to ICA.apply() was "
+  2263                          "baseline-corrected. Please note that ICA can "
+  2264                          "introduce DC shifts, therefore you may wish to "
+  2265                          "consider baseline-correcting the cleaned data again."
+  2266                      )
+  2267                      _on_missing(on_baseline, msg, "on_baseline")
+  2268  
+  2269          logger.info(f"Applying ICA to {kind} instance")
+  2270          out = meth(**kwargs)
+  2271          if reapply_baseline:
+  2272              out.apply_baseline(inst.baseline)
+  2273          return out
+  2274  
+  2275      def _check_exclude(self, exclude):
+  2276          if exclude is None:
+  2277              return list(set(self.exclude))
+  2278          else:
+  2279              # Allow both self.exclude and exclude to be array-like:
+  2280              return list(set(self.exclude).union(set(exclude)))
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 4, $0.01):
+```
+grep -n "_apply_raw\|_apply_epochs\|_apply_evoked" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+2242:            kind, meth = "Raw", self._apply_raw
+2245:            kind, meth = "Epochs", self._apply_epochs
+2248:            kind, meth = "Evoked", self._apply_evoked
+2282:    def _apply_raw(self, raw, include, exclude, n_pca_components, start, stop):
+2298:    def _apply_epochs(self, epochs, include, exclude, n_pca_components):
+2323:    def _apply_evoked(self, evoked, include, exclude, n_pca_components):
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 5, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py | sed -n '2280,2360p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  2280              return list(set(self.exclude).union(set(exclude)))
+  2281  
+  2282      def _apply_raw(self, raw, include, exclude, n_pca_components, start, stop):
+  2283          """Aux method."""
+  2284          _check_preload(raw, "ica.apply")
+  2285  
+  2286          start, stop = _check_start_stop(raw, start, stop)
+  2287  
+  2288          picks = pick_types(
+  2289              raw.info, meg=False, include=self.ch_names, exclude="bads", ref_meg=False
+  2290          )
+  2291  
+  2292          data = raw[picks, start:stop][0]
+  2293          data = self._pick_sources(data, include, exclude, n_pca_components)
+  2294  
+  2295          raw[picks, start:stop] = data
+  2296          return raw
+  2297  
+  2298      def _apply_epochs(self, epochs, include, exclude, n_pca_components):
+  2299          """Aux method."""
+  2300          _check_preload(epochs, "ica.apply")
+  2301  
+  2302          picks = pick_types(
+  2303              epochs.info, meg=False, ref_meg=False, include=self.ch_names, exclude="bads"
+  2304          )
+  2305  
+  2306          # special case where epochs come picked but fit was 'unpicked'.
+  2307          if len(picks) != len(self.ch_names):
+  2308              raise RuntimeError(
+  2309                  f"Epochs don't match fitted data: {len(self.ch_names)} channels "
+  2310                  f"fitted but {len(picks)} channels supplied. \nPlease "
+  2311                  "provide Epochs compatible with 'ica.ch_names'."
+  2312              )
+  2313  
+  2314          data = np.hstack(epochs.get_data(picks))
+  2315          data = self._pick_sources(data, include, exclude, n_pca_components)
+  2316  
+  2317          # restore epochs, channels, tsl order
+  2318          epochs._data[:, picks] = np.array(np.split(data, len(epochs.events), 1))
+  2319          epochs.preload = True
+  2320  
+  2321          return epochs
+  2322  
+  2323      def _apply_evoked(self, evoked, include, exclude, n_pca_components):
+  2324          """Aux method."""
+  2325          picks = pick_types(
+  2326              evoked.info, meg=False, ref_meg=False, include=self.ch_names, exclude="bads"
+  2327          )
+  2328  
+  2329          # special case where evoked come picked but fit was 'unpicked'.
+  2330          if len(picks) != len(self.ch_names):
+  2331              raise RuntimeError(
+  2332                  f"Evoked does not match fitted data: {len(self.ch_names)} channels "
+  2333                  f"fitted but {len(picks)} channels supplied. \nPlease "
+  2334                  "provide an Evoked object that's compatible with ica.ch_names."
+  2335              )
+  2336  
+  2337          data = evoked.data[picks]
+  2338          data = self._pick_sources(data, include, exclude, n_pca_components)
+  2339  
+  2340          # restore evoked
+  2341          evoked.data[picks] = data
+  2342  
+  2343          return evoked
+  2344  
+  2345      def _pick_sources(self, data, include, exclude, n_pca_components):
+  2346          """Aux function."""
+  2347          if n_pca_components is None:
+  2348              n_pca_components = self.n_pca_components
+  2349          data = self._pre_whiten(data)
+  2350          exclude = self._check_exclude(exclude)
+  2351          _n_pca_comp = self._check_n_pca_components(n_pca_components)
+  2352          n_ch, _ = data.shape
+  2353  
+  2354          max_pca_components = self.pca_components_.shape[0]
+  2355          if not self.n_components_ <= _n_pca_comp <= max_pca_components:
+  2356              raise ValueError(
+  2357                  f"n_pca_components ({_n_pca_comp}) must be >= "
+  2358                  f"n_components_ ({self.n_components_}) and <= "
+  2359                  "the total number of PCA components "
+  2360                  f"({max_pca_components})."
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 6, $0.02):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py | sed -n '2355,2440p'
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+  2355          if not self.n_components_ <= _n_pca_comp <= max_pca_components:
+  2356              raise ValueError(
+  2357                  f"n_pca_components ({_n_pca_comp}) must be >= "
+  2358                  f"n_components_ ({self.n_components_}) and <= "
+  2359                  "the total number of PCA components "
+  2360                  f"({max_pca_components})."
+  2361              )
+  2362  
+  2363          logger.info(
+  2364              f"    Transforming to ICA space ({self.n_components_} "
+  2365              f"component{_pl(self.n_components_)})"
+  2366          )
+  2367  
+  2368          # Apply first PCA
+  2369          if self.pca_mean_ is not None:
+  2370              data -= self.pca_mean_[:, None]
+  2371  
+  2372          sel_keep = np.arange(self.n_components_)
+  2373          if include not in (None, []):
+  2374              sel_keep = np.unique(include)
+  2375          elif exclude not in (None, []):
+  2376              sel_keep = np.setdiff1d(np.arange(self.n_components_), exclude)
+  2377  
+  2378          n_zero = self.n_components_ - len(sel_keep)
+  2379          logger.info(f"    Zeroing out {n_zero} ICA component{_pl(n_zero)}")
+  2380  
+  2381          # Mixing and unmixing should both be shape (self.n_components_, 2),
+  2382          # and we need to put these into the upper left part of larger mixing
+  2383          # and unmixing matrices of shape (n_ch, _n_pca_comp)
+  2384          pca_components = self.pca_components_[:_n_pca_comp]
+  2385          assert pca_components.shape == (_n_pca_comp, n_ch)
+  2386          assert (
+  2387              self.unmixing_matrix_.shape
+  2388              == self.mixing_matrix_.shape
+  2389              == (self.n_components_,) * 2
+  2390          )
+  2391          unmixing = np.eye(_n_pca_comp)
+  2392          unmixing[: self.n_components_, : self.n_components_] = self.unmixing_matrix_
+  2393          unmixing = np.dot(unmixing, pca_components)
+  2394  
+  2395          logger.info(
+  2396              f"    Projecting back using {_n_pca_comp} PCA component{_pl(_n_pca_comp)}"
+  2397          )
+  2398          mixing = np.eye(_n_pca_comp)
+  2399          mixing[: self.n_components_, : self.n_components_] = self.mixing_matrix_
+  2400          mixing = pca_components.T @ mixing
+  2401          assert mixing.shape == unmixing.shape[::-1] == (n_ch, _n_pca_comp)
+  2402  
+  2403          # keep requested components plus residuals (if any)
+  2404          sel_keep = np.concatenate(
+  2405              (sel_keep, np.arange(self.n_components_, _n_pca_comp))
+  2406          )
+  2407          proj_mat = np.dot(mixing[:, sel_keep], unmixing[sel_keep, :])
+  2408          data = np.dot(proj_mat, data)
+  2409          assert proj_mat.shape == (n_ch,) * 2
+  2410  
+  2411          if self.pca_mean_ is not None:
+  2412              data += self.pca_mean_[:, None]
+  2413  
+  2414          # restore scaling
+  2415          if self.noise_cov is None:  # revert standardization
+  2416              data *= self.pre_whitener_
+  2417          else:
+  2418              data = np.linalg.pinv(self.pre_whitener_, rcond=1e-14) @ data
+  2419  
+  2420          return data
+  2421  
+  2422      @verbose
+  2423      def save(self, fname, *, overwrite=False, verbose=None):
+  2424          """Store ICA solution into a fiff file.
+  2425  
+  2426          Parameters
+  2427          ----------
+  2428          fname : path-like
+  2429              The absolute path of the file name to save the ICA solution into.
+  2430              The file name should end with ``-ica.fif`` or ``-ica.fif.gz``.
+  2431          %(overwrite)s
+  2432  
+  2433              .. versionadded:: 1.0
+  2434          %(verbose)s
+  2435  
+  2436          Returns
+  2437          -------
+  2438          ica : instance of ICA
+  2439              The object.
+  2440  
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 7, $0.02):
+```
+grep -n "_pre_whiten\|pre_whitener_\|noise_cov" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py | head 
+-60
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+246:    noise_cov : None | instance of Covariance
+282:    pre_whitener_ : ndarray, shape (n_channels, 1) or (n_channels, n_channels)
+343:       (using ``noise_cov`` if provided, or the standard deviation of each
+442:        noise_cov=None,
+456:        self.noise_cov = noise_cov
+765:            "pre_whitener_",
+836:        # more from _pre_whiten)
+843:    def _compute_pre_whitener(self, data):
+847:        if self.noise_cov is None:
+862:                self.noise_cov, self.info, picks=self.info.ch_names
+865:        self.pre_whitener_ = pre_whitener
+880:                if self.noise_cov is None:  # otherwise it's in pre_whitener_
+884:    def _pre_whiten(self, data):
+886:        if self.noise_cov is None:
+887:            data /= self.pre_whitener_
+889:            data = self.pre_whitener_ @ data
+896:        self._compute_pre_whitener(data)
+897:        data = self._pre_whiten(data)
+1019:        data = self._pre_whiten(data)
+2349:        data = self._pre_whiten(data)
+2415:        if self.noise_cov is None:  # revert standardization
+2416:            data *= self.pre_whitener_
+2418:            data = np.linalg.pinv(self.pre_whitener_, rcond=1e-14) @ data
+2953:        noise_cov=ica.noise_cov,
+2994:    write_double_matrix(fid, FIFF.FIFF_MNE_ICA_WHITENER, ica.pre_whitener_)
+3108:    if ica_init["noise_cov"] == Covariance.__name__:
+3126:    ica.pre_whitener_ = f(pre_whitener)
+3521:    ica.pre_whitener_ = np.ones((n_ch, 1))
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 8, $0.02):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py | sed -n '843,910p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   843      def _compute_pre_whitener(self, data):
+   844          """Aux function."""
+   845          data = self._do_proj(data, log_suffix="(pre-whitener computation)")
+   846  
+   847          if self.noise_cov is None:
+   848              # use standardization as whitener
+   849              # Scale (z-score) the data by channel type
+   850              info = self.info
+   851              pre_whitener = np.empty([len(data), 1])
+   852              for _, picks_ in _picks_by_type(info, ref_meg=False, exclude=[]):
+   853                  pre_whitener[picks_] = np.std(data[picks_])
+   854              if _contains_ch_type(info, "ref_meg"):
+   855                  picks_ = pick_types(info, ref_meg=True, exclude=[])
+   856                  pre_whitener[picks_] = np.std(data[picks_])
+   857              if _contains_ch_type(info, "eog"):
+   858                  picks_ = pick_types(info, eog=True, exclude=[])
+   859                  pre_whitener[picks_] = np.std(data[picks_])
+   860          else:
+   861              pre_whitener, _ = compute_whitener(
+   862                  self.noise_cov, self.info, picks=self.info.ch_names
+   863              )
+   864              assert data.shape[0] == pre_whitener.shape[1]
+   865          self.pre_whitener_ = pre_whitener
+   866  
+   867      def _do_proj(self, data, log_suffix=""):
+   868          if self.info is not None and self.info["projs"]:
+   869              proj, nproj, _ = make_projector(
+   870                  [p for p in self.info["projs"] if p["active"]],
+   871                  self.info["ch_names"],
+   872                  include_active=True,
+   873              )
+   874              if nproj:
+   875                  logger.info(
+   876                      f"    Applying projection operator with {nproj} "
+   877                      f"vector{_pl(nproj)}"
+   878                      f"{' ' if log_suffix else ''}{log_suffix}"
+   879                  )
+   880                  if self.noise_cov is None:  # otherwise it's in pre_whitener_
+   881                      data = proj @ data
+   882          return data
+   883  
+   884      def _pre_whiten(self, data):
+   885          data = self._do_proj(data, log_suffix="(pre-whitener application)")
+   886          if self.noise_cov is None:
+   887              data /= self.pre_whitener_
+   888          else:
+   889              data = self.pre_whitener_ @ data
+   890          return data
+   891  
+   892      def _fit(self, data, fit_type):
+   893          """Aux function."""
+   894          random_state = check_random_state(self.random_state)
+   895          n_channels, n_samples = data.shape
+   896          self._compute_pre_whitener(data)
+   897          data = self._pre_whiten(data)
+   898  
+   899          pca = _PCA(n_components=self._max_pca_components, whiten=True)
+   900          data = pca.fit_transform(data.T)
+   901          use_ev = pca.explained_variance_ratio_
+   902          n_pca = self.n_pca_components
+   903          if isinstance(n_pca, float):
+   904              n_pca = int(_exp_var_ncomp(use_ev, n_pca)[0])
+   905          elif n_pca is None:
+   906              n_pca = len(use_ev)
+   907          assert isinstance(n_pca, int | np.int_)
+   908  
+   909          # If user passed a float, select the PCA components explaining the
+   910          # given cumulative variance. This information will later be used to
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 9, $0.03):
+```
+grep -n "def fit" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+595:    def fit(
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 10, $0.04):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py | sed -n '595,720p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   595      def fit(
+   596          self,
+   597          inst,
+   598          picks=None,
+   599          start=None,
+   600          stop=None,
+   601          decim=None,
+   602          reject=None,
+   603          flat=None,
+   604          tstep=2.0,
+   605          reject_by_annotation=True,
+   606          verbose=None,
+   607      ):
+   608          """Run the ICA decomposition on raw data.
+   609  
+   610          Caveat! If supplying a noise covariance keep track of the projections
+   611          available in the cov, the raw or the epochs object. For example,
+   612          if you are interested in EOG or ECG artifacts, EOG and ECG projections
+   613          should be temporally removed before fitting the ICA.
+   614  
+   615          Parameters
+   616          ----------
+   617          inst : instance of Raw or Epochs
+   618              The data to be decomposed.
+   619          %(picks_good_data_noref)s
+   620              This selection remains throughout the initialized ICA solution.
+   621          start, stop : int | float | None
+   622              First and last sample to include. If float, data will be
+   623              interpreted as time in seconds. If ``None``, data will be used from
+   624              the first sample and to the last sample, respectively.
+   625  
+   626              .. note:: These parameters only have an effect if ``inst`` is
+   627                        `~mne.io.Raw` data.
+   628          decim : int | None
+   629              Increment for selecting only each n-th sampling point. If ``None``,
+   630              all samples  between ``start`` and ``stop`` (inclusive) are used.
+   631          reject, flat : dict | None
+   632              Rejection parameters based on peak-to-peak amplitude (PTP)
+   633              in the continuous data. Signal periods exceeding the thresholds
+   634              in ``reject`` or less than the thresholds in ``flat`` will be
+   635              removed before fitting the ICA.
+   636  
+   637              .. note:: These parameters only have an effect if ``inst`` is
+   638                        `~mne.io.Raw` data. For `~mne.Epochs`, perform PTP
+   639                        rejection via :meth:`~mne.Epochs.drop_bad`.
+   640  
+   641              Valid keys are all channel types present in the data. Values must
+   642              be integers or floats.
+   643  
+   644              If ``None``, no PTP-based rejection will be performed. Example::
+   645  
+   646                  reject = dict(
+   647                      grad=4000e-13, # T / m (gradiometers)
+   648                      mag=4e-12, # T (magnetometers)
+   649                      eeg=40e-6, # V (EEG channels)
+   650                      eog=250e-6 # V (EOG channels)
+   651                  )
+   652                  flat = None  # no rejection based on flatness
+   653          tstep : float
+   654              Length of data chunks for artifact rejection in seconds.
+   655  
+   656              .. note:: This parameter only has an effect if ``inst`` is
+   657                        `~mne.io.Raw` data.
+   658          %(reject_by_annotation_raw)s
+   659  
+   660              .. versionadded:: 0.14.0
+   661          %(verbose)s
+   662  
+   663          Returns
+   664          -------
+   665          self : instance of ICA
+   666              Returns the modified instance.
+   667          """
+   668          req_map = dict(fastica="sklearn", picard="picard")
+   669          for method, mod in req_map.items():
+   670              if self.method == method:
+   671                  _require_version(mod, f"use method={repr(method)}")
+   672  
+   673          _validate_type(inst, (BaseRaw, BaseEpochs), "inst", "Raw or Epochs")
+   674  
+   675          if np.isclose(inst.info["highpass"], 0.0):
+   676              warn(
+   677                  "The data has not been high-pass filtered. For good ICA "
+   678                  "performance, it should be high-pass filtered (e.g., with a "
+   679                  "1.0 Hz lower bound) before fitting ICA."
+   680              )
+   681  
+   682          if isinstance(inst, BaseEpochs) and inst.baseline is not None:
+   683              warn(
+   684                  "The epochs you passed to ICA.fit() were baseline-corrected. "
+   685                  "However, we suggest to fit ICA only on data that has been "
+   686                  "high-pass filtered, but NOT baseline-corrected."
+   687              )
+   688  
+   689          if not isinstance(inst, BaseRaw):
+   690              ignored_params = [
+   691                  param_name
+   692                  for param_name, param_val in zip(
+   693                      ("start", "stop", "reject", "flat"), (start, stop, reject, flat)
+   694                  )
+   695                  if param_val is not None
+   696              ]
+   697              if ignored_params:
+   698                  warn(
+   699                      f"The following parameters passed to ICA.fit() will be "
+   700                      f"ignored, as they only affect raw data (and it appears "
+   701                      f"you passed epochs): {', '.join(ignored_params)}"
+   702                  )
+   703  
+   704          picks = _picks_to_idx(
+   705              inst.info, picks, allow_empty=False, with_ref_meg=self.allow_ref_meg
+   706          )
+   707          _check_for_unsupported_ica_channels(
+   708              picks, inst.info, allow_ref_meg=self.allow_ref_meg
+   709          )
+   710  
+   711          # Actually start fitting
+   712          t_start = time()
+   713          if self.current_fit != "unfitted":
+   714              self._reset()
+   715  
+   716          logger.info(
+   717              "Fitting ICA to data using %i channels (please be patient, this may take "
+   718              "a while)",
+   719              len(picks),
+   720          )
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 11, $0.04):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py | sed -n '720,800p'
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+   720          )
+   721  
+   722          # n_components could be float 0 < x < 1, but that's okay here
+   723          if self.n_components is not None and self.n_components > len(picks):
+   724              raise ValueError(
+   725                  f"ica.n_components ({self.n_components}) cannot "
+   726                  f"be greater than len(picks) ({len(picks)})"
+   727              )
+   728  
+   729          # filter out all the channels the raw wouldn't have initialized
+   730          self.info = pick_info(inst.info, picks)
+   731  
+   732          if self.info["comps"]:
+   733              with self.info._unlock():
+   734                  self.info["comps"] = []
+   735          self.ch_names = self.info["ch_names"]
+   736  
+   737          if isinstance(inst, BaseRaw):
+   738              self._fit_raw(
+   739                  inst,
+   740                  picks,
+   741                  start,
+   742                  stop,
+   743                  decim,
+   744                  reject,
+   745                  flat,
+   746                  tstep,
+   747                  reject_by_annotation,
+   748                  verbose,
+   749              )
+   750          else:
+   751              assert isinstance(inst, BaseEpochs)
+   752              self._fit_epochs(inst, picks, decim, verbose)
+   753  
+   754          # sort ICA components by explained variance
+   755          var = _ica_explained_variance(self, inst)
+   756          var_ord = var.argsort()[::-1]
+   757          _sort_components(self, var_ord, copy=False)
+   758          t_stop = time()
+   759          logger.info(f"Fitting ICA took {t_stop - t_start:.1f}s.")
+   760          return self
+   761  
+   762      def _reset(self):
+   763          """Aux method."""
+   764          for key in (
+   765              "pre_whitener_",
+   766              "unmixing_matrix_",
+   767              "mixing_matrix_",
+   768              "n_components_",
+   769              "n_samples_",
+   770              "pca_components_",
+   771              "pca_explained_variance_",
+   772              "pca_mean_",
+   773              "n_iter_",
+   774              "drop_inds_",
+   775              "reject_",
+   776          ):
+   777              if hasattr(self, key):
+   778                  delattr(self, key)
+   779          self.current_fit = "unfitted"
+   780  
+   781      def _fit_raw(
+   782          self,
+   783          raw,
+   784          picks,
+   785          start,
+   786          stop,
+   787          decim,
+   788          reject,
+   789          flat,
+   790          tstep,
+   791          reject_by_annotation,
+   792          verbose,
+   793      ):
+   794          """Aux method."""
+   795          start, stop = _check_start_stop(raw, start, stop)
+   796  
+   797          reject_by_annotation = "omit" if reject_by_annotation else None
+   798          # this will be a copy
+   799          data = raw.get_data(picks, start, stop, reject_by_annotation)
+   800  
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 12, $0.05):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py | sed -n '800,900p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   800  
+   801          # this will be a view
+   802          if decim is not None:
+   803              data = data[:, ::decim]
+   804  
+   805          # this will make a copy
+   806          if (reject is not None) or (flat is not None):
+   807              self.reject_ = reject
+   808              data, self.drop_inds_ = _reject_data_segments(
+   809                  data, reject, flat, decim, self.info, tstep
+   810              )
+   811          else:
+   812              self.reject_ = None
+   813  
+   814          self.n_samples_ = data.shape[1]
+   815          self._fit(data, "raw")
+   816  
+   817          return self
+   818  
+   819      def _fit_epochs(self, epochs, picks, decim, verbose):
+   820          """Aux method."""
+   821          if epochs.events.size == 0:
+   822              raise RuntimeError(
+   823                  "Tried to fit ICA with epochs, but none were found: epochs.events is "
+   824                  f'"{epochs.events}".'
+   825              )
+   826  
+   827          # this should be a copy (picks a list of int)
+   828          data = epochs.get_data(picks=picks)
+   829          # this will be a view
+   830          if decim is not None:
+   831              data = data[:, :, ::decim]
+   832  
+   833          self.n_samples_ = data.shape[0] * data.shape[2]
+   834  
+   835          # This will make at least one copy (one from hstack, maybe one
+   836          # more from _pre_whiten)
+   837          data = np.hstack(data)
+   838          self._fit(data, "epochs")
+   839          self.reject_ = deepcopy(epochs.reject)
+   840  
+   841          return self
+   842  
+   843      def _compute_pre_whitener(self, data):
+   844          """Aux function."""
+   845          data = self._do_proj(data, log_suffix="(pre-whitener computation)")
+   846  
+   847          if self.noise_cov is None:
+   848              # use standardization as whitener
+   849              # Scale (z-score) the data by channel type
+   850              info = self.info
+   851              pre_whitener = np.empty([len(data), 1])
+   852              for _, picks_ in _picks_by_type(info, ref_meg=False, exclude=[]):
+   853                  pre_whitener[picks_] = np.std(data[picks_])
+   854              if _contains_ch_type(info, "ref_meg"):
+   855                  picks_ = pick_types(info, ref_meg=True, exclude=[])
+   856                  pre_whitener[picks_] = np.std(data[picks_])
+   857              if _contains_ch_type(info, "eog"):
+   858                  picks_ = pick_types(info, eog=True, exclude=[])
+   859                  pre_whitener[picks_] = np.std(data[picks_])
+   860          else:
+   861              pre_whitener, _ = compute_whitener(
+   862                  self.noise_cov, self.info, picks=self.info.ch_names
+   863              )
+   864              assert data.shape[0] == pre_whitener.shape[1]
+   865          self.pre_whitener_ = pre_whitener
+   866  
+   867      def _do_proj(self, data, log_suffix=""):
+   868          if self.info is not None and self.info["projs"]:
+   869              proj, nproj, _ = make_projector(
+   870                  [p for p in self.info["projs"] if p["active"]],
+   871                  self.info["ch_names"],
+   872                  include_active=True,
+   873              )
+   874              if nproj:
+   875                  logger.info(
+   876                      f"    Applying projection operator with {nproj} "
+   877                      f"vector{_pl(nproj)}"
+   878                      f"{' ' if log_suffix else ''}{log_suffix}"
+   879                  )
+   880                  if self.noise_cov is None:  # otherwise it's in pre_whitener_
+   881                      data = proj @ data
+   882          return data
+   883  
+   884      def _pre_whiten(self, data):
+   885          data = self._do_proj(data, log_suffix="(pre-whitener application)")
+   886          if self.noise_cov is None:
+   887              data /= self.pre_whitener_
+   888          else:
+   889              data = self.pre_whitener_ @ data
+   890          return data
+   891  
+   892      def _fit(self, data, fit_type):
+   893          """Aux function."""
+   894          random_state = check_random_state(self.random_state)
+   895          n_channels, n_samples = data.shape
+   896          self._compute_pre_whitener(data)
+   897          data = self._pre_whiten(data)
+   898  
+   899          pca = _PCA(n_components=self._max_pca_components, whiten=True)
+   900          data = pca.fit_transform(data.T)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 13, $0.05):
+```
+grep -n "_picks_by_type" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+31:    _picks_by_type,
+852:            for _, picks_ in _picks_by_type(info, ref_meg=False, exclude=[]):
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 14, $0.06):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+grep -n "exclude" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py | head -30
+```
+
+Tool:
+<returncode>
+0
+<output>
+231:            third component, on the other hand, would be excluded.
+303:    exclude : array-like of int
+304:        List or np.array of sources indices to exclude when re-mixing the data
+308:        (e.g. ``ica.exclude.extend(eog_inds)``).
+309:        (There is also an ``exclude`` parameter in the :meth:`ICA.apply`
+352:    2. Includes ICA components based on ``ica.include`` and ``ica.exclude``.
+371:    later exclude) only large, dominating artifacts in the data, but still
+501:        self.exclude = []
+518:            excludes: list[str]
+541:        if self.exclude:
+542:            excludes = [self._ica_names[i] for i in self.exclude]
+544:            excludes = []
+555:            excludes=excludes,
+572:                f"{len(infos.excludes) or 'no'} sources marked for exclusion"
+590:            excludes=infos.excludes,
+852:            for _, picks_ in _picks_by_type(info, ref_meg=False, exclude=[]):
+855:                picks_ = pick_types(info, ref_meg=True, exclude=[])
+858:                picks_ = pick_types(info, eog=True, exclude=[])
+1062:        picks = _picks_to_idx(inst.info, self.ch_names, exclude=[], allow_empty=True)
+1193:            exclude=[],
+1379:        info["bads"] = [ch_names[k] for k in self.exclude]
+2017:            inst.info, self.ch_names, "all", exclude=(), allow_empty=False
+2176:        exclude=None,
+2187:        zero out all excluded components, and inverse-transform the data.
+2189:        the dynamics described by the excluded components is subtracted.
+2199:            will be included (minus those defined in ``ica.exclude``
+2200:            and the ``exclude`` parameter, see below).
+2201:        exclude : array_like of int
+2204:            empty list, only components from ``ica.exclude`` will be
+2205:            excluded. Else, the union of ``exclude`` and ``ica.exclude``
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+User:
+Tool call error:
+
+<error>
+No tool calls found in the response. Every response MUST include at least one tool call.
+</error>
+
+Here is general guidance on how to submit correct toolcalls:
+
+Every response needs to use the 'bash' tool at least once to execute commands.
+
+Call the bash tool with your command as the argument:
+- Tool: bash
+- Arguments: {"command": "your_command_here"}
+
+If you want to end the task, please issue the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`
+without any other command.
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 16, $0.07):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+cd /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0 && git log --oneline -10 2>/dev/null || echo "Not a git repo"
+```
+
+Tool:
+<returncode>
+0
+<output>
+Not a git repo
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 17, $0.07):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+ls -la /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/
+```
+
+Tool:
+<returncode>
+0
+<output>
+total 256
+drwx------    3 user  staff      96 May  1 21:18 .
+drwx------@ 346 user  staff   11072 May  1 21:18 ..
+-rw-r--r--    1 user  staff  129722 May  1 21:18 ica.py
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 18, $0.08):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py | sed -n '2282,2330p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  2282      def _apply_raw(self, raw, include, exclude, n_pca_components, start, stop):
+  2283          """Aux method."""
+  2284          _check_preload(raw, "ica.apply")
+  2285  
+  2286          start, stop = _check_start_stop(raw, start, stop)
+  2287  
+  2288          picks = pick_types(
+  2289              raw.info, meg=False, include=self.ch_names, exclude="bads", ref_meg=False
+  2290          )
+  2291  
+  2292          data = raw[picks, start:stop][0]
+  2293          data = self._pick_sources(data, include, exclude, n_pca_components)
+  2294  
+  2295          raw[picks, start:stop] = data
+  2296          return raw
+  2297  
+  2298      def _apply_epochs(self, epochs, include, exclude, n_pca_components):
+  2299          """Aux method."""
+  2300          _check_preload(epochs, "ica.apply")
+  2301  
+  2302          picks = pick_types(
+  2303              epochs.info, meg=False, ref_meg=False, include=self.ch_names, exclude="bads"
+  2304          )
+  2305  
+  2306          # special case where epochs come picked but fit was 'unpicked'.
+  2307          if len(picks) != len(self.ch_names):
+  2308              raise RuntimeError(
+  2309                  f"Epochs don't match fitted data: {len(self.ch_names)} channels "
+  2310                  f"fitted but {len(picks)} channels supplied. \nPlease "
+  2311                  "provide Epochs compatible with 'ica.ch_names'."
+  2312              )
+  2313  
+  2314          data = np.hstack(epochs.get_data(picks))
+  2315          data = self._pick_sources(data, include, exclude, n_pca_components)
+  2316  
+  2317          # restore epochs, channels, tsl order
+  2318          epochs._data[:, picks] = np.array(np.split(data, len(epochs.events), 1))
+  2319          epochs.preload = True
+  2320  
+  2321          return epochs
+  2322  
+  2323      def _apply_evoked(self, evoked, include, exclude, n_pca_components):
+  2324          """Aux method."""
+  2325          picks = pick_types(
+  2326              evoked.info, meg=False, ref_meg=False, include=self.ch_names, exclude="bads"
+  2327          )
+  2328  
+  2329          # special case where evoked come picked but fit was 'unpicked'.
+  2330          if len(picks) != len(self.ch_names):
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 19, $0.09):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py | sed -n '704,720p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   704          picks = _picks_to_idx(
+   705              inst.info, picks, allow_empty=False, with_ref_meg=self.allow_ref_meg
+   706          )
+   707          _check_for_unsupported_ica_channels(
+   708              picks, inst.info, allow_ref_meg=self.allow_ref_meg
+   709          )
+   710  
+   711          # Actually start fitting
+   712          t_start = time()
+   713          if self.current_fit != "unfitted":
+   714              self._reset()
+   715  
+   716          logger.info(
+   717              "Fitting ICA to data using %i channels (please be patient, this may take "
+   718              "a while)",
+   719              len(picks),
+   720          )
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 20, $0.10):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+cat > /tmp/check_ica.py << 'EOF'
+# Check the _apply methods in ICA
+import re
+
+with open('/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmph5ckpp_0/ica.py', 'r') as f:
+    content = f.read()
+
+# Find all pick_types calls in apply methods
+print("Looking for pick_types calls in apply-related methods...")
+lines = content.split('\n')
+for i, line in enumerate(lines, 1):
+    if 'def _apply_' in line:
+        print(f"\nFound: {line.strip()} at line {i}")
+    if 'pick_types' in line and i > 2270 and i < 2350:
+        print(f"  Line {i}: {line.strip()}")
+EOF
+python3 /tmp/check_ica.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+Looking for pick_types calls in apply-related methods...
+
+Found: def _apply_raw(self, raw, include, exclude, n_pca_components, start, stop): at line 2282
+  Line 2288: picks = pick_types(
+
+Found: def _apply_epochs(self, epochs, include, exclude, n_pca_components): at line 2298
+  Line 2302: picks = pick_types(
+
+Found: def _apply_evoked(self, evoked, include, exclude, n_pca_components): at line 2323
+  Line 2325: picks = pick_types(
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 21, $0.10):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+cat > /tmp/test_ica_apply.py << 'EOF'
+"""
+Test to understand the ICA apply bug.
+
+The issue is in how _apply_raw, _apply_epochs, and _apply_evoked handle picks.
+
+When ICA is fitted with bad channels marked in inst.info["bads"], but those
+bad channels are not included in the picks, the pre_whitener_ is computed
+only for the picked channels.
+
+However, in _apply_raw, _apply_epochs, etc., it uses:
+    picks = pick_types(..., include=self.ch_names, exclude="bads")
+
+This excludes bad channels in the raw/epochs/evoked data.
+
+But there's a mismatch when the ICA was fitted WITH bad channels marked
+in the original data - the pre_whitener_ and other fitted params have
+different dimensions than what pick_types returns.
+"""
+
+print("Analysis complete.")
+EOF
+python3 /tmp/test_ica_apply.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+Analysis complete.
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Limits exceeded. Limits: 0 steps, $0.1.
+Current spend: 21 steps, $0.10.
+New step limit: 
+=== STDERR ===

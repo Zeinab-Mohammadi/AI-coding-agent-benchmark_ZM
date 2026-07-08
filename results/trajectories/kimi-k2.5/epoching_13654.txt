@@ -1,0 +1,1623 @@
+=== STDOUT ===
+👋 This is mini-swe-agent version 2.2.8.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/Users/user/Library/Application 
+Support/mini-swe-agent/.env'
+Building agent config from specs: 
+['/Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-p
+ackages/minisweagent/config/mini.yaml']
+
+System:
+You are a helpful assistant that can interact with a computer.
+
+User:
+Please solve this issue: Fix the bug in the file 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py.
+
+Context: This bug is in MNE-Python's epoching pipeline. Remember: in a standard 
+EEG/MEG workflow, epochs are time-locked segments around experimental events. 
+Baseline correction should use a pre-stimulus period. Incorrect time alignment 
+or baseline logic corrupts all downstream analyses.
+
+The file is from the MNE-Python neuroscience library (PR #13654: Fix 
+epochs.plot() scrollbar issue).
+Read the file, identify the bug, and fix it in place. Only modify 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py. Do 
+not install packages or run tests.
+
+You can execute bash commands and edit files to implement the necessary changes.
+
+## Recommended Workflow
+
+This workflow should be done step-by-step so that you can iterate on your 
+changes and any possible problems.
+
+1. Analyze the codebase by finding and reading relevant files
+2. Create a script to reproduce the issue
+3. Edit the source code to resolve the issue
+4. Verify your fix works by running your script again
+5. Test edge cases to ensure your fix is robust
+6. Submit your changes and finish your work by issuing the following command: 
+`echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+   Do not combine it with any other command. <important>After this command, you 
+cannot continue working on this task.</important>
+
+## Command Execution Rules
+
+You are operating in an environment where
+
+1. You issue at least one command
+2. The system executes the command(s) in a subshell
+3. You see the result(s)
+4. You write your next command(s)
+
+Each response should include:
+
+1. **Reasoning text** where you explain your analysis and plan
+2. At least one tool call with your command
+
+**CRITICAL REQUIREMENTS:**
+
+- Your response SHOULD include reasoning text explaining what you're doing
+- Your response MUST include AT LEAST ONE bash tool call
+- Directory or environment variable changes are not persistent. Every action is 
+executed in a new subshell.
+- However, you can prefix any action with `MY_ENV_VAR=MY_VALUE cd 
+/path/to/working/dir && ...` or write/load environment variables from files
+- Submit your changes and finish your work by issuing the following command: 
+`echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+  Do not combine it with any other command. <important>After this command, you 
+cannot continue working on this task.</important>
+
+Example of a CORRECT response:
+<example_response>
+I need to understand the structure of the repository first. Let me check what 
+files are in the current directory to get a better understanding of the 
+codebase.
+
+[Makes bash tool call with {"command": "ls -la"} as arguments]
+</example_response>
+
+<system_information>
+Darwin 25.4.0 Darwin Kernel Version 25.4.0: Thu Mar 19 19:30:44 PDT 2026; 
+root:xnu-12377.101.15~1/RELEASE_ARM64_T6000 x86_64
+</system_information>
+
+## Useful command examples
+
+### Create a new file:
+
+```bash
+cat <<'EOF' > newfile.py
+import numpy as np
+hello = "world"
+print(hello)
+EOF
+```
+
+### Edit files with sed:<important>
+You are on MacOS. For all the below examples, you need to use `sed -i ''` 
+instead of `sed -i`.
+</important>```bash
+# Replace all occurrences
+sed -i 's/old_string/new_string/g' filename.py
+
+# Replace only first occurrence
+sed -i 's/old_string/new_string/' filename.py
+
+# Replace first occurrence on line 1
+sed -i '1s/old_string/new_string/' filename.py
+
+# Replace all occurrences in lines 1-10
+sed -i '1,10s/old_string/new_string/g' filename.py
+```
+
+### View file content:
+
+```bash
+# View specific lines with numbers
+nl -ba filename.py | sed -n '10,20p'
+```
+
+### Any other command you want to run
+
+```bash
+anything
+```
+────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 1, $0.00):
+```
+cat /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py
+```
+
+Tool:
+<returncode>
+0
+<output_head>
+"""Figure classes for MNE-Python's 2D plots.
+
+Class Hierarchy
+---------------
+
+MNEFigParams    Container object, attached to MNEFigure by default. Sets
+                close_key='escape' plus whatever other key-value pairs are
+                passed to its constructor.
+
+matplotlib.figure.Figure
+  └ MNEFigure
+     ├ MNEBrowseFigure         Interactive figure for scrollable data.
+     │                         Generated by:
+     │                         - raw.plot()
+     │                         - epochs.plot()
+     │                         - ica.plot_sources(raw)
+     │                         - ica.plot_sources(epochs)
+     │
+     ├ MNEAnnotationFigure     GUI for adding annotations to Raw
+     │
+     ├ MNESelectionFigure      GUI for spatial channel selection. raw.plot()
+     │                         and epochs.plot() will generate one of these
+     │                         alongside an MNEBrowseFigure when
+     │                         group_by == 'selection' or 'position'
+     │
+     └ MNELineFigure           Interactive figure for non-scrollable data.
+                               Generated by:
+                               - spectrum.plot()
+                               - evoked.plot()        TODO Not yet implemented
+                               - evoked.plot_white()  TODO Not yet implemented
+                               - evoked.plot_joint()  TODO Not yet implemented
+"""
+
+# Authors: The MNE-Python contributors.
+# License: BSD-3-Clause
+# Copyright the MNE-Python contributors.
+
+import datetime
+import platform
+from collections import OrderedDict
+from contextlib import contextmanager
+from functools import partial
+
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib import get_backend
+from matplotlib.figure import Figure
+
+from .._fiff.pick import (
+    _DATA_CH_TYPES_ORDER_DEFAULT,
+    _DATA_CH_TYPES_SPLIT,
+    _EYETRACK_CH_TYPES_SPLIT,
+    _FNIRS_CH_TYPES_SPLIT,
+    _VALID_CHANNEL_TYPES,
+    channel_indices_by_type,
+    pick_types,
+)
+from ..fixes import _close_event
+from ..utils import Bunch, _click_ch_name, check_version, logger
+from ._figure import BrowserBase
+from .utils import (
+    _BLIT_KWARGS,
+    DraggableLine,
+    _events_off,
+    _fake_click,
+    _fake_keypress,
+    _fake_scroll,
+    _merge_annotations,
+    _set_window_title,
+    _validate_if_list_of_axes,
+    plot_sensors,
+    plt_show,
+)
+
+name = "matplotlib"
+BACKEND = get_backend()
+
+# CONSTANTS (inches)
+ANNOTATION_FIG_PAD = 0.1
+ANNOTATION_FIG_MIN_H = 2.9  # fixed part, not including radio buttons/labels
+ANNOTATION_FIG_W = 5.0
+ANNOTATION_FIG_CHECKBOX_COLUMN_W = 0.5
+_OLD_BUTTONS = not check_version("matplotlib", "3.7")
+
+
+class MNEFigure(Figure):
+    """Base class for 2D figures & dialogs; wraps matplotlib.figure.Figure."""
+
+    def __init__(self, **kwargs):
+        from matplotlib import rcParams
+
+        # figsize is the only kwarg we pass to matplotlib Figure()
+        figsize = kwargs.pop("figsize", None)
+        super().__init__(figsize=figsize)
+        # things we'll almost always want
+        defaults = dict(
+            fgcolor=rcParams["axes.edgecolor"], 
+bgcolor=rcParams["axes.facecolor"]
+        )
+        for key, value in defaults.items():
+            if key not in kwargs:
+                kwargs[key] = value
+
+        # add param object if not already added (e.g. by BrowserBase)
+        if not hasattr(self, "mne"):
+            from mne.viz._figure import BrowserParams
+
+            self.mne = BrowserParams(**kwargs)
+        else:
+            for key in [k for k in kwargs if not hasattr(self.mne, k)]:
+                setattr(self.mne, key, kwargs[key])
+
+    def _close(self, event=None):
+        """Handle close events."""
+        logger.debug(f"Closing {self!r}")
+        # remove references from parent fig to child fig
+        is_child = getattr(self.mne, "parent_fig", None) is not None
+        is_named = getattr(self.mne, "fig_name", None) is not None
+        if is_child:
+            try:
+                self.mne.parent_fig.mne.child_figs.remove(self)
+            except ValueError:
+                pass  # already removed (on its own, probably?)
+            if is_named:
+                setattr(self.mne.parent_fig.mne, self.mne.fig_name, None)
+
+    def _keypress(self, event):
+        """Handle keypress events."""
+        if event.key == self.mne.close_key:
+            plt.close(self)
+        elif event.key == "f11":  # full screen
+            self.canvas.manager.full_screen_toggle()
+
+    def _buttonpress(self, event):
+        """Handle buttonpress events."""
+        pass
+
+    def _pick(self, event):
+        """Handle matplotlib pick events."""
+        pass
+
+    def _resize(self, event):
+        """Handle window resize events."""
+        pass
+
+    def _add_default_callbacks(self, **kwargs):
+        """Remove some matplotlib default callbacks and add MNE-Python ones."""
+        # Remove matplotlib default keypress catchers
+        default_callbacks = list(
+            self.canvas.callbacks.callbacks.get("key_press_
+<output_tail>
+  fig = axes[0].get_figure()
+    else:
+        figsize = kwargs.pop("figsize", (10, 2.5 * n_axes + 1))
+        fig = _figure(
+            inst=inst,
+            toolbar=True,
+            FigureClass=MNELineFigure,
+            figsize=figsize,
+            n_axes=n_axes,
+            **kwargs,
+        )
+        fig.mne.fig_size_px = fig._get_size_px()  # can't do in __init__
+        axes = fig.axes
+    return fig, axes
+
+
+def _split_picks_by_type(inst, picks, units, scalings, titles):
+    """Separate picks, units, etc, for plotting on separate subplots."""
+    picks_list = list()
+    units_list = list()
+    scalings_list = list()
+    titles_list = list()
+    # if picks is None, only show data channels
+    allowed_ch_types = _DATA_CH_TYPES_SPLIT if picks is None else 
+_VALID_CHANNEL_TYPES
+    for ch_type in allowed_ch_types:
+        pick_kwargs = dict(meg=False, ref_meg=False, exclude=[])
+        if ch_type in ("mag", "grad"):
+            pick_kwargs["meg"] = ch_type
+        elif ch_type in _FNIRS_CH_TYPES_SPLIT:
+            pick_kwargs["fnirs"] = ch_type
+        elif ch_type in _EYETRACK_CH_TYPES_SPLIT:
+            pick_kwargs["eyetrack"] = ch_type
+        else:
+            pick_kwargs[ch_type] = True
+        these_picks = pick_types(inst.info, **pick_kwargs)
+        these_picks = np.intersect1d(these_picks, picks)
+        if len(these_picks) > 0:
+            picks_list.append(these_picks)
+            units_list.append(units[ch_type])
+            scalings_list.append(scalings[ch_type])
+            titles_list.append(titles[ch_type])
+    if len(picks_list) == 0:
+        raise RuntimeError("No data channels found")
+    return picks_list, units_list, scalings_list, titles_list
+
+
+def _calc_new_margins(fig, old_width, old_height, new_width, new_height):
+    """Compute new figure-relative values to maintain fixed-size margins."""
+    new_margins = dict()
+    for side in ("left", "right", "bottom", "top"):
+        ratio = (
+            (old_width / new_width)
+            if side in ("left", "right")
+            else (old_height / new_height)
+        )
+        rel_dim = getattr(fig.subplotpars, side)
+        if side in ("right", "top"):
+            new_margins[side] = 1 - ratio * (1 - rel_dim)
+        else:
+            new_margins[side] = ratio * rel_dim
+    # gh-8304: don't allow resizing too small
+    if (
+        new_margins["bottom"] < new_margins["top"]
+        and new_margins["left"] < new_margins["right"]
+    ):
+        return new_margins
+
+
+@contextmanager
+def _patched_canvas(fig):
+    old_canvas = fig.canvas
+    if fig.canvas is None:  # XXX old MPL (at least 3.0.3) does this for Agg
+        fig.canvas = Bunch(mpl_connect=lambda event, callback: None)
+    try:
+        yield
+    finally:
+        fig.canvas = old_canvas
+
+
+def _init_browser(**kwargs):
+    """Instantiate a new MNE browse-style figure."""
+    from mne.io import BaseRaw
+
+    fig = _figure(toolbar=False, FigureClass=MNEBrowseFigure, layout=None, 
+**kwargs)
+
+    # splash is ignored (maybe we could do it for mpl if we get_backend() and
+    # check if it's Qt... but seems overkill)
+
+    # initialize zen mode
+    # (can't do in __init__ due to get_position() calls)
+    fig.canvas.draw()
+    fig._update_zen_mode_offsets()
+    fig._resize(None)  # needed for MPL
+
+    # if scrollbars are supposed to start hidden,
+    # set to True and then toggle
+    if not fig.mne.scrollbars_visible:
+        fig.mne.scrollbars_visible = True
+        fig._toggle_scrollbars()
+
+    # Initialize parts of the plot
+    is_ica = fig.mne.instance_type == "ica"
+
+    if not is_ica:
+        # make channel selection dialog,
+        # if requested (doesn't work well in init)
+        if fig.mne.group_by in ("selection", "position"):
+            fig._create_selection_fig()
+
+    # start with projectors dialog open, if requested
+    if getattr(fig.mne, "show_options", False):
+        fig._toggle_proj_fig()
+
+    # update data, and plot
+    fig._update_trace_offsets()
+    fig._redraw(update_data=True, annotations=False)
+
+    if isinstance(fig.mne.inst, BaseRaw):
+        fig._setup_annotation_colors()
+        fig._draw_annotations()
+
+    return fig
+
+
+def _get_check_kwargs(labels=None):
+    check_kwargs = dict()
+    if not _OLD_BUTTONS:
+        check_kwargs.update(
+            check_props=dict(s=144, clip_on=False),
+            frame_props=dict(s=144, clip_on=False),
+        )
+        if labels is not None:
+            textcolor = list()
+            checkcolor = list()
+            for label in labels:
+                if label.endswith("(already applied)"):
+                    textcolor.append("0.5")
+                    checkcolor.append("0.7")
+                else:
+                    textcolor.append("k")
+                    checkcolor.append("k")
+            check_kwargs["check_props"].update(facecolor=checkcolor, 
+linewidth=1)
+            check_kwargs["frame_props"].update(edgecolor=checkcolor, 
+linewidth=1)
+            check_kwargs["label_props"] = dict(color=textcolor)
+    return check_kwargs
+
+<elided_chars>
+95829
+<warning>
+Output too long.
+────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 2, $0.00):
+```
+grep -n "epoch" 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py | 
+head -100
+```
+
+Tool:
+<returncode>
+0
+<output>
+15:     │                         - epochs.plot()
+17:     │                         - ica.plot_sources(epochs)
+22:     │                         and epochs.plot() will generate one of these
+407:        if self.mne.is_epochs:
+408:            epoch_nums = self.mne.inst.selection
+409:            for ix, _ in enumerate(epoch_nums):
+430:            # main axes, minor ticks: ticklabel (epoch number) for every 
+epoch
+432:            ax_main.xaxis.set_minor_formatter(FixedFormatter(epoch_nums))
+433:            # hscroll axes, minor ticks: up to 20 ticklabels (epoch numbers)
+438:                FuncFormatter(lambda x, pos: 
+self._get_epoch_num_from_time(x))
+502:        if self.mne.is_epochs:
+503:            x = np.arange(self.mne.n_epochs)
+644:        if self.mne.is_epochs:
+686:            if self.mne.is_epochs:
+687:                denom = 1 if key.startswith("shift") else self.mne.n_epochs
+723:            if self.mne.is_epochs:
+724:                # prevent from showing zero epochs, or more epochs than we 
+have
+725:                self.mne.n_epochs = np.clip(
+726:                    self.mne.n_epochs + dur_delta, 1, len(self.mne.inst)
+728:                # use the length of one epoch as duration change
+753:            self._toggle_epoch_histogram()
+792:                if self.mne.instance_type == "epochs" or not butterfly:
+793:                    for line in self.mne.traces + self.mne.epoch_traces:
+795:                            if self.mne.instance_type == "epochs":
+796:                                self._toggle_bad_epoch(event)
+938:        is_epo = inst == "epochs"
+947:        ch_epo = "epoch" if is_epo else "channel"
+950:            [f"Show {n} epochs" for n in ("fewer", "more")]
+951:            if self.mne.is_epochs
+962:            epochs="Show imageplot for channel",
+970:        scrl = "1 epoch" if self.mne.is_epochs else "¼ window"
+1268:        if self.mne.fig_annotation is None and not self.mne.is_epochs:
+1666:    def _toggle_epoch_histogram(self):
+1668:        if self.mne.instance_type == "epochs":
+1670:                self._create_epoch_histogram()
+1688:    def _toggle_bad_epoch(self, event):
+1689:        """Mark/unmark bad epochs."""
+1690:        epoch_ix, color = super()._toggle_bad_epoch(event.xdata)
+1691:        self.mne.ax_hscroll.patches[epoch_ix].set_color(color)
+1756:        if self.mne.is_epochs:
+1809:                if self.mne.is_epochs:
+2049:        # check for bad epochs
+2051:        if self.mne.instance_type == "epochs":
+2052:            epoch_ix = np.searchsorted(self.mne.boundary_times, time_range)
+2053:            epoch_ix = np.arange(epoch_ix[0], epoch_ix[1])
+2054:            epoch_nums = self.mne.inst.selection[epoch_ix[0] : epoch_ix[-1]
++ 1]
+2055:            (visible_bad_epoch_ix,) = np.isin(epoch_nums, 
+self.mne.bad_epochs).nonzero()
+2056:            while len(self.mne.epoch_traces):
+2057:                self.mne.epoch_traces.pop(-1).remove()
+2058:            # handle custom epoch colors (for autoreject integration)
+2059:            if self.mne.epoch_colors is None:
+2060:                # shape: n_traces × RGBA → n_traces × n_epochs × RGBA
+2062:                    ch_colors[:, None, :], (1, self.mne.n_epochs, 1)
+2065:                custom_colors = np.empty((len(self.mne.picks), 
+self.mne.n_epochs, 4))
+2066:                for ii, _epoch_ix in enumerate(epoch_ix):
+2067:                    this_colors = self.mne.epoch_colors[_epoch_ix]
+2071:            # override custom color on bad epochs
+2072:            for _ix in visible_bad_epoch_ix:
+2074:                    [self.mne.epoch_color_bad, self.mne.ch_color_bad], 
+dtype=object
+2106:            # plot each trace multiple times to get the desired epoch 
+coloring.
+2107:            # use masked arrays to plot discontinuous epochs that have the 
+same
+2109:            if self.mne.instance_type == "epochs":
+2114:                    _starts = self.mne.boundary_times[epoch_ix][bool_ixs]
+2115:                    _stops = self.mne.boundary_times[epoch_ix + 
+1][bool_ixs]
+2134:                        self.mne.epoch_traces.extend(_trace)
+2152:        if self.mne.vline_visible and self.mne.is_epochs:
+2154:            _ = self._recompute_epochs_vlines(None)
+2204:    def _recompute_epochs_vlines(self, xdata):
+2205:        """Recompute vline x-coords for epochs plots (after scrolling, 
+etc)."""
+2210:        # compute the (continuous) times for the lines on each epoch
+2211:        epoch_dur = np.diff(self.mne.boundary_times[:2])[0]
+2212:        rel_time = xdata % epoch_dur
+2214:        xs = np.arange(self.mne.n_epochs) * epoch_dur + abs_time + rel_time
+2217:        # (i.e., handle case when n_segments != n_epochs)
+2225:        if self.mne.is_epochs:
+2226:            # convert xdata to be epoch-relative (for the text)
+2227:            rel_time = self._recompute_epochs_vlines(xdata)
+2312:            labels = 
+self.mne.ax_main.get_xticklabels(minor=self.mne.is_epochs)
+
+────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 3, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+grep -n "scrollbar" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+343:    """Interactive figure with scrollbars, for data browsing."""
+391:        self.mne.zen_xlabel.set_visible(not self.mne.scrollbars_visible)
+709:            # add new chs from above if we're at the bottom of the scrollbar
+768:        elif key == "z":  # zen mode: hide scrollbars and buttons
+769:            self._toggle_scrollbars()
+804:            # click in vertical scrollbar
+810:            # click in horizontal scrollbar
+996:                ("z", "Toggle scrollbars"),
+1505:        """Handle clicks on vertical scrollbar when using selections."""
+1699:        """Compute difference between main axes edges and scrollbar edges."""
+1710:    def _toggle_scrollbars(self):
+1711:        """Show or hide scrollbars (A.K.A. zen mode)."""
+1714:        # scrollbars. We can't use ax.set_position() because axes are
+1716:        should_show = not self.mne.scrollbars_visible
+1734:        self.mne.scrollbars_visible = should_show
+1737:        """Update the vertical scrollbar (channel) selection indicator."""
+1743:        """Update the horizontal scrollbar (time) selection indicator."""
+1748:        """Handle clicks on horizontal scrollbar."""
+1982:        # update ylim, ticks, vertline, and scrollbar patch
+2485:    # if scrollbars are supposed to start hidden,
+2487:    if not fig.mne.scrollbars_visible:
+2488:        fig.mne.scrollbars_visible = True
+2489:        fig._toggle_scrollbars()
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 4, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py | sed -n 
+'1700,1760p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  1700          self.mne.fig_size_px = self._get_size_px()
+  1701          self.mne.zen_w = (
+  1702              self.mne.ax_vscroll.get_position().xmax
+  1703              - self.mne.ax_main.get_position().xmax
+  1704          )
+  1705          self.mne.zen_h = (
+  1706              self.mne.ax_main.get_position().ymin
+  1707              - self.mne.ax_hscroll.get_position().ymin
+  1708          )
+  1709  
+  1710      def _toggle_scrollbars(self):
+  1711          """Show or hide scrollbars (A.K.A. zen mode)."""
+  1712          self._update_zen_mode_offsets()
+  1713          # grow/shrink main axes to take up space from (or make room for)
+  1714          # scrollbars. We can't use ax.set_position() because axes are
+  1715          # locatable, so we use subplots_adjust
+  1716          should_show = not self.mne.scrollbars_visible
+  1717          margins = {
+  1718              side: getattr(self.subplotpars, side)
+  1719              for side in ("left", "bottom", "right", "top")
+  1720          }
+  1721          # if should_show, bottom margin moves up; right margin moves left
+  1722          margins["bottom"] += (1 if should_show else -1) * self.mne.zen_h
+  1723          margins["right"] += (-1 if should_show else 1) * self.mne.zen_w
+  1724          self.subplots_adjust(**margins)
+  1725          # handle x-axis label
+  1726          self.mne.zen_xlabel.set_visible(not should_show)
+  1727          # show/hide other UI elements
+  1728          for elem in ("ax_hscroll", "ax_vscroll", "ax_proj", "ax_help"):
+  1729              if elem == "ax_vscroll" and self.mne.butterfly:
+  1730                  continue
+  1731              # sometimes we don't have a proj button (ax_proj)
+  1732              if getattr(self.mne, elem, None) is not None:
+  1733                  getattr(self.mne, elem).set_visible(should_show)
+  1734          self.mne.scrollbars_visible = should_show
+  1735  
+  1736      def _update_vscroll(self):
+  1737          """Update the vertical scrollbar (channel) selection indicator."""
+  1738          self.mne.vsel_patch.set_xy((0, self.mne.ch_start))
+  1739          self.mne.vsel_patch.set_height(self.mne.n_channels)
+  1740          self._update_yaxis_labels()
+  1741  
+  1742      def _update_hscroll(self):
+  1743          """Update the horizontal scrollbar (time) selection indicator."""
+  1744          self.mne.hsel_patch.set_xy((self.mne.t_start, 0))
+  1745          self.mne.hsel_patch.set_width(self.mne.duration)
+  1746  
+  1747      def _check_update_hscroll_clicked(self, event):
+  1748          """Handle clicks on horizontal scrollbar."""
+  1749          time = event.xdata - self.mne.duration / 2
+  1750          max_time = (
+  1751              self.mne.n_times / self.mne.info["sfreq"]
+  1752              + self.mne.first_time
+  1753              - self.mne.duration
+  1754          )
+  1755          time = np.clip(time, self.mne.first_time, max_time)
+  1756          if self.mne.is_epochs:
+  1757              ix = np.searchsorted(self.mne.boundary_times[1:], time)
+  1758              time = self.mne.boundary_times[ix]
+  1759          if self.mne.t_start != time:
+  1760              self.mne.t_start = time
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 5, $0.01):
+```
+grep -n "selection" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py | head
+-50
+```
+
+Tool:
+<returncode>
+0
+<output>
+21:     ├ MNESelectionFigure      GUI for spatial channel selection. raw.plot()
+24:     │                         group_by == 'selection' or 'position'
+222:        """Handle Radiobutton clicks for Annotation label selection."""
+277:    """Interactive dialog figure for channel selections."""
+282:        self.mne.fig_selection = None
+283:        # selection fig & main fig tightly integrated; closing one closes both
+294:        """Handle RadioButton clicks for channel selection groups."""
+296:        selections_dict = self.mne.parent_fig.mne.ch_selections
+301:        if this_label == "Custom" and not len(selections_dict["Custom"]):
+303:                buttons.set_active(self.mne.old_selection)
+305:        # clicking a selection cancels butterfly mode
+311:        parent._update_selection()
+313:    def _set_custom_selection(self):
+314:        """Set custom selection by lasso selector."""
+315:        chs = self.lasso.selection
+322:        parent.mne.ch_selections["Custom"] = inds.nonzero()[0]
+334:        # when leaving butterfly mode, make most-recently-used selection active
+337:                buttons.set_active(self.mne.old_selection)
+408:            epoch_nums = self.mne.inst.selection
+656:            elif self.mne.fig_selection is not None:
+657:                buttons = self.mne.fig_selection.mne.radio_ax.buttons
+661:                selections_dict = self.mne.ch_selections
+664:                has_custom = selections_dict.get("Custom", None) is not None
+665:                def_custom = len(selections_dict.get("Custom", list()))
+704:            and self.mne.fig_selection is None
+806:                if self.mne.fig_selection is not None:
+807:                    self._change_selection_vscroll(event)
+1441:    def _create_selection_fig(self):
+1442:        """Create channel selection dialog window."""
+1450:            fig_name="fig_selection",
+1451:            window_title="Channel selection",
+1466:        # style the sensors so the selection is easier to distinguish
+1472:        selections_dict = self.mne.ch_selections
+1473:        selections_dict.update(Custom=np.array([], dtype=int))  # for lasso
+1474:        labels = list(selections_dict)
+1480:        fig.mne.old_selection = 0
+1489:            "To use a custom selection, first click-drag on the sensor plot "
+1492:            "allows a lasso selection adding to (rather than replacing) the "
+1493:            "existing selection."
+1502:        fig.lasso.callbacks.append(fig._set_custom_selection)
+1504:    def _change_selection_vscroll(self, event):
+1505:        """Handle clicks on vertical scrollbar when using selections."""
+1506:        buttons = self.mne.fig_selection.mne.radio_ax.buttons
+1509:        selections_dict = self.mne.ch_selections
+1511:            offset += len(selections_dict[label])
+1515:                self.mne.fig_selection._radiopress(event)
+1518:    def _update_selection(self):
+1519:        """Update visible channels based on selection dialog interaction."""
+1520:        selections_dict = self.mne.ch_selections
+1521:        fig = self.mne.fig_selection
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 6, $0.02):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py | sed -n '380,450p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   380          top = 1 - self._inch_to_rel(t_margin, horiz=False)
+   381          width = right - left
+   382          height = top - bottom
+   383          position = [left, bottom, width, height]
+   384          # Main axes must be a subplot for subplots_adjust to work (so user can
+   385          # adjust margins). That's why we don't use the Divider class directly.
+   386          ax_main = self.add_subplot(1, 1, 1, position=position)
+   387          self.subplotpars.update(left=left, bottom=bottom, top=top, right=right)
+   388          div = make_axes_locatable(ax_main)
+   389          # this only gets shown in zen mode
+   390          self.mne.zen_xlabel = ax_main.set_xlabel(xlabel)
+   391          self.mne.zen_xlabel.set_visible(not self.mne.scrollbars_visible)
+   392          # make sure background color of the axis is set
+   393          if "bgcolor" in kwargs:
+   394              ax_main.set_facecolor(kwargs["bgcolor"])
+   395  
+   396          # SCROLLBARS
+   397          ax_hscroll = div.append_axes(
+   398              position="bottom", size=Fixed(scroll_width), pad=Fixed(hscroll_dist)
+   399          )
+   400          ax_vscroll = div.append_axes(
+   401              position="right", size=Fixed(scroll_width), pad=Fixed(vscroll_dist)
+   402          )
+   403          ax_hscroll.get_yaxis().set_visible(False)
+   404          ax_hscroll.set_xlabel(xlabel)
+   405          ax_vscroll.set_axis_off()
+   406          # HORIZONTAL SCROLLBAR PATCHES (FOR MARKING BAD EPOCHS)
+   407          if self.mne.is_epochs:
+   408              epoch_nums = self.mne.inst.selection
+   409              for ix, _ in enumerate(epoch_nums):
+   410                  start = self.mne.boundary_times[ix]
+   411                  width = np.diff(self.mne.boundary_times[:2])[0]
+   412                  ax_hscroll.add_patch(
+   413                      Rectangle(
+   414                          (start, 0),
+   415                          width,
+   416                          1,
+   417                          color="none",
+   418                          zorder=self.mne.zorder["patch"],
+   419                      )
+   420                  )
+   421              # both axes, major ticks: gridlines
+   422              for _ax in (ax_main, ax_hscroll):
+   423                  _ax.xaxis.set_major_locator(FixedLocator(self.mne.boundary_times[1:-1]))
+   424                  _ax.xaxis.set_major_formatter(NullFormatter())
+   425              grid_kwargs = dict(
+   426                  color=self.mne.fgcolor, axis="x", zorder=self.mne.zorder["grid"]
+   427              )
+   428              ax_main.grid(linewidth=2, linestyle="dashed", **grid_kwargs)
+   429              ax_hscroll.grid(alpha=0.5, linewidth=0.5, linestyle="solid", **grid_kwargs)
+   430              # main axes, minor ticks: ticklabel (epoch number) for every epoch
+   431              ax_main.xaxis.set_minor_locator(FixedLocator(self.mne.midpoints))
+   432              ax_main.xaxis.set_minor_formatter(FixedFormatter(epoch_nums))
+   433              # hscroll axes, minor ticks: up to 20 ticklabels (epoch numbers)
+   434              ax_hscroll.xaxis.set_minor_locator(
+   435                  FixedLocator(self.mne.midpoints, nbins=20)
+   436              )
+   437              ax_hscroll.xaxis.set_minor_formatter(
+   438                  FuncFormatter(lambda x, pos: self._get_epoch_num_from_time(x))
+   439              )
+   440              # hide some ticks
+   441              ax_main.tick_params(axis="x", which="major", bottom=False)
+   442              ax_hscroll.tick_params(axis="x", which="both", bottom=False)
+   443          else:
+   444              # RAW / ICA X-AXIS TICK & LABEL FORMATTING
+   445              ax_main.xaxis.set_major_formatter(
+   446                  FuncFormatter(partial(self._xtick_formatter, ax_type="main"))
+   447              )
+   448              ax_hscroll.xaxis.set_major_formatter(
+   449                  FuncFormatter(partial(self._xtick_formatter, ax_type="hscroll"))
+   450              )
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 7, $0.02):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py | sed -n 
+'1743,1780p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  1743          """Update the horizontal scrollbar (time) selection indicator."""
+  1744          self.mne.hsel_patch.set_xy((self.mne.t_start, 0))
+  1745          self.mne.hsel_patch.set_width(self.mne.duration)
+  1746  
+  1747      def _check_update_hscroll_clicked(self, event):
+  1748          """Handle clicks on horizontal scrollbar."""
+  1749          time = event.xdata - self.mne.duration / 2
+  1750          max_time = (
+  1751              self.mne.n_times / self.mne.info["sfreq"]
+  1752              + self.mne.first_time
+  1753              - self.mne.duration
+  1754          )
+  1755          time = np.clip(time, self.mne.first_time, max_time)
+  1756          if self.mne.is_epochs:
+  1757              ix = np.searchsorted(self.mne.boundary_times[1:], time)
+  1758              time = self.mne.boundary_times[ix]
+  1759          if self.mne.t_start != time:
+  1760              self.mne.t_start = time
+  1761              self._update_hscroll()
+  1762              return True
+  1763          return False
+  1764  
+  1765      def _check_update_vscroll_clicked(self, event):
+  1766          """Update vscroll patch on click, return True if location changed."""
+  1767          new_ch_start = np.clip(
+  1768              int(round(event.ydata - self.mne.n_channels / 2)),
+  1769              0,
+  1770              len(self.mne.ch_order) - self.mne.n_channels,
+  1771          )
+  1772          if self.mne.ch_start != new_ch_start:
+  1773              self.mne.ch_start = new_ch_start
+  1774              self._update_picks()
+  1775              self._update_vscroll()
+  1776              return True
+  1777          return False
+  1778  
+  1779      # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+  1780      # SCALEBARS & AXIS LABELS
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 8, $0.03):
+```
+grep -n "hsel_patch" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+487:        hsel_patch = Rectangle(
+494:        ax_hscroll.add_patch(hsel_patch)
+564:            hsel_patch=hsel_patch,
+1744:        self.mne.hsel_patch.set_xy((self.mne.t_start, 0))
+1745:        self.mne.hsel_patch.set_width(self.mne.duration)
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 9, $0.03):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py | sed -n '480,570p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   480          hsel_facecolor = np.average(
+   481              np.vstack(
+   482                  (to_rgba_array(self.mne.fgcolor), to_rgba_array(self.mne.bgcolor))
+   483              ),
+   484              axis=0,
+   485              weights=(3, 1),
+   486          )  # 75% foreground, 25% background
+   487          hsel_patch = Rectangle(
+   488              (self.mne.t_start, 0),
+   489              self.mne.duration,
+   490              1,
+   491              facecolor=hsel_facecolor,
+   492              **sel_kwargs,
+   493          )
+   494          ax_hscroll.add_patch(hsel_patch)
+   495          ax_hscroll.set_xlim(
+   496              self.mne.first_time,
+   497              self.mne.first_time + self.mne.n_times / self.mne.info["sfreq"],
+   498          )
+   499          # VLINE
+   500          vline_color = (0.0, 0.75, 0.0)
+   501          vline_kwargs = dict(visible=False, zorder=self.mne.zorder["vline"])
+   502          if self.mne.is_epochs:
+   503              x = np.arange(self.mne.n_epochs)
+   504              vline = ax_main.vlines(x, 0, 1, colors=vline_color, **vline_kwargs)
+   505              vline.set_transform(
+   506                  blended_transform_factory(ax_main.transData, ax_main.transAxes)
+   507              )
+   508              vline_hscroll = None
+   509          else:
+   510              vline = ax_main.axvline(0, color=vline_color, **vline_kwargs)
+   511              vline_hscroll = ax_hscroll.axvline(0, color=vline_color, **vline_kwargs)
+   512          vline_text = ax_main.annotate(
+   513              "",
+   514              xy=(0, 0),
+   515              xycoords="axes fraction",
+   516              xytext=(-2, 0),
+   517              textcoords="offset points",
+   518              fontsize=10,
+   519              ha="right",
+   520              va="center",
+   521              color=vline_color,
+   522              **vline_kwargs,
+   523          )
+   524  
+   525          # HELP BUTTON: initialize in the wrong spot...
+   526          ax_help = div.append_axes(
+   527              position="left", size=Fixed(help_width), pad=Fixed(vscroll_dist)
+   528          )
+   529          # HELP BUTTON: ...move it down by changing its locator
+   530          loc = div.new_locator(nx=0, ny=0)
+   531          ax_help.set_axes_locator(loc)
+   532          # HELP BUTTON: make it a proper button
+   533          with _patched_canvas(ax_help.figure):
+   534              self.mne.button_help = Button(ax_help, "Help")
+   535          # PROJ BUTTON
+   536          ax_proj = None
+   537          if len(self.mne.projs) and not self.mne.inst.proj:
+   538              proj_button_pos = [
+   539                  1 - self._inch_to_rel(r_margin + scroll_width),  # left
+   540                  self._inch_to_rel(b_margin, horiz=False),  # bottom
+   541                  self._inch_to_rel(scroll_width),  # width
+   542                  self._inch_to_rel(scroll_width, horiz=False),  # height
+   543              ]
+   544              loc = div.new_locator(nx=4, ny=0)
+   545              ax_proj = self.add_axes(proj_button_pos)
+   546              ax_proj.set_axes_locator(loc)
+   547              with _patched_canvas(ax_help.figure):
+   548                  self.mne.button_proj = Button(ax_proj, "Prj")
+   549  
+   550          # INIT TRACES
+   551          self.mne.trace_kwargs = dict(antialiased=True, linewidth=0.5)
+   552          self.mne.traces = ax_main.plot(
+   553              np.full((1, self.mne.n_channels), np.nan), **self.mne.trace_kwargs
+   554          )
+   555  
+   556          # SAVE UI ELEMENT HANDLES
+   557          vars(self.mne).update(
+   558              ax_main=ax_main,
+   559              ax_help=ax_help,
+   560              ax_proj=ax_proj,
+   561              ax_hscroll=ax_hscroll,
+   562              ax_vscroll=ax_vscroll,
+   563              vsel_patch=vsel_patch,
+   564              hsel_patch=hsel_patch,
+   565              vline=vline,
+   566              vline_hscroll=vline_hscroll,
+   567              vline_text=vline_text,
+   568          )
+   569  
+   570      def _get_size(self):
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 10, $0.04):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py | sed -n '700,770p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   700              self._redraw(update_data=False)
+   701          # change number of visible channels
+   702          elif (
+   703              key in ("pageup", "pagedown")
+   704              and self.mne.fig_selection is None
+   705              and not self.mne.butterfly
+   706          ):
+   707              new_n_ch = n_channels + (1 if key == "pageup" else -1)
+   708              self.mne.n_channels = np.clip(new_n_ch, 1, len(self.mne.ch_order))
+   709              # add new chs from above if we're at the bottom of the scrollbar
+   710              ch_end = self.mne.ch_start + self.mne.n_channels
+   711              if ch_end > len(self.mne.ch_order) and self.mne.ch_start > 0:
+   712                  self.mne.ch_start -= 1
+   713                  self._update_vscroll()
+   714              # redraw only if changed
+   715              if self.mne.n_channels != n_channels:
+   716                  self._update_picks()
+   717                  self._update_trace_offsets()
+   718                  self._redraw(annotations=True)
+   719          # change duration
+   720          elif key in ("home", "end"):
+   721              old_dur = self.mne.duration
+   722              dur_delta = 1 if key == "end" else -1
+   723              if self.mne.is_epochs:
+   724                  # prevent from showing zero epochs, or more epochs than we have
+   725                  self.mne.n_epochs = np.clip(
+   726                      self.mne.n_epochs + dur_delta, 1, len(self.mne.inst)
+   727                  )
+   728                  # use the length of one epoch as duration change
+   729                  min_dur = len(self.mne.inst.times) / self.mne.info["sfreq"]
+   730                  new_dur = self.mne.duration + dur_delta * min_dur
+   731              else:
+   732                  # never show fewer than 3 samples
+   733                  min_dur = 3 * np.diff(self.mne.inst.times[:2])[0]
+   734                  # use multiplicative dur_delta
+   735                  dur_delta = 5 / 4 if dur_delta > 0 else 4 / 5
+   736                  new_dur = self.mne.duration * dur_delta
+   737              self.mne.duration = np.clip(new_dur, min_dur, last_time)
+   738              if self.mne.duration != old_dur:
+   739                  if self.mne.t_start + self.mne.duration > last_time:
+   740                      self.mne.t_start = last_time - self.mne.duration
+   741                  self._update_hscroll()
+   742                  self._redraw(annotations=True)
+   743          elif key == "?":  # help window
+   744              self._toggle_help_fig(event)
+   745          elif key == "a":  # annotation mode
+   746              self._toggle_annotation_fig()
+   747          elif key == "b" and self.mne.instance_type != "ica":  # butterfly mode
+   748              self._toggle_butterfly()
+   749          elif key == "d":  # DC shift
+   750              self.mne.remove_dc = not self.mne.remove_dc
+   751              self._redraw()
+   752          elif key == "h":  # histogram
+   753              self._toggle_epoch_histogram()
+   754          elif key == "j" and len(self.mne.projs):  # SSP window
+   755              self._toggle_proj_fig()
+   756          elif key == "J" and len(self.mne.projs):
+   757              self._toggle_proj_checkbox(event, toggle_all=True)
+   758          elif key == "p":  # toggle draggable annotations
+   759              self._toggle_draggable_annotations(event)
+   760              if self.mne.fig_annotation is not None:
+   761                  checkbox = self.mne.fig_annotation.mne.drag_checkbox
+   762                  with _events_off(checkbox):
+   763                      checkbox.set_active(0)
+   764          elif key == "s":  # scalebars
+   765              self._toggle_scalebars(event)
+   766          elif key == "w":  # toggle noise cov whitening
+   767              self._toggle_whitening()
+   768          elif key == "z":  # zen mode: hide scrollbars and buttons
+   769              self._toggle_scrollbars()
+   770              self._redraw(update_data=False)
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 11, $0.04):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py | sed -n 
+'1780,1900p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+  1780      # SCALEBARS & AXIS LABELS
+  1781      # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+  1782  
+  1783      def _show_scalebars(self):
+  1784          """Add channel scale bars."""
+  1785          for pi, pick in enumerate(self.mne.picks):
+  1786              this_name = self.mne.ch_names[pick]
+  1787              this_type = self.mne.ch_types[pick]
+  1788              # TODO: Simplify this someday -- we have to duplicate the challenging
+  1789              # logic of _draw_traces here
+  1790              offset_ixs = (
+  1791                  self.mne.picks
+  1792                  if self.mne.butterfly and self.mne.ch_selections is None
+  1793                  else slice(None)
+  1794              )
+  1795              offset = self.mne.trace_offsets[offset_ixs][pi]
+  1796              if (
+  1797                  this_type not in self.mne.scalebars
+  1798                  and this_type != "stim"
+  1799                  and this_type in self.mne.scalings
+  1800                  and this_type in getattr(self.mne, "units", {})
+  1801                  and this_type in getattr(self.mne, "unit_scalings", {})
+  1802                  and this_name not in self.mne.info["bads"]
+  1803                  and this_name not in self.mne.whitened_ch_names
+  1804              ):
+  1805                  x = (self.mne.times[0] + self.mne.first_time,) * 2
+  1806                  denom = 4 if self.mne.butterfly else 2
+  1807                  y = tuple(np.array([-1, 1]) / denom + offset)
+  1808                  self._draw_one_scalebar(x, y, this_type)
+  1809                  if self.mne.is_epochs:
+  1810                      x = (
+  1811                          self.mne.times[0],
+  1812                          self.mne.times[0] + self.mne.boundary_times[1] / 2,
+  1813                      )
+  1814                      y_value = self.mne.n_channels - 0.5
+  1815                      y = (y_value, y_value)
+  1816                      self._draw_one_scalebar(x, y, "time")
+  1817  
+  1818      def _hide_scalebars(self):
+  1819          """Remove channel scale bars."""
+  1820          for bar in self.mne.scalebars.values():
+  1821              bar.remove()
+  1822          for text in self.mne.scalebar_texts.values():
+  1823              text.remove()
+  1824          self.mne.scalebars = dict()
+  1825          self.mne.scalebar_texts = dict()
+  1826  
+  1827      def _toggle_scalebars(self, event):
+  1828          """Show/hide the scalebars."""
+  1829          if self.mne.scalebars_visible:
+  1830              self._hide_scalebars()
+  1831          else:
+  1832              self._update_picks()
+  1833              self._show_scalebars()
+  1834          # toggle
+  1835          self.mne.scalebars_visible = not self.mne.scalebars_visible
+  1836          self._redraw(update_data=False)
+  1837  
+  1838      def _draw_one_scalebar(self, x, y, ch_type):
+  1839          """Draw a scalebar."""
+  1840          from .utils import _simplify_float
+  1841  
+  1842          color = "#AA3377"  # purple
+  1843          kwargs = dict(color=color, zorder=self.mne.zorder["scalebar"])
+  1844          if ch_type == "time":
+  1845              label = f"{self.mne.boundary_times[1] / 2:.2f} s"
+  1846              text = self.mne.ax_main.text(
+  1847                  x[0] + 0.015,
+  1848                  y[1] - 0.05,
+  1849                  label,
+  1850                  va="bottom",
+  1851                  ha="left",
+  1852                  size="xx-small",
+  1853                  **kwargs,
+  1854              )
+  1855          else:
+  1856              scaler = 1 if self.mne.butterfly else 2
+  1857              inv_norm = (
+  1858                  scaler
+  1859                  * self.mne.scalings[ch_type]
+  1860                  * self.mne.unit_scalings[ch_type]
+  1861                  / self.mne.scale_factor
+  1862              )
+  1863              label = f"{_simplify_float(inv_norm)} {self.mne.units[ch_type]} "
+  1864              text = self.mne.ax_main.text(
+  1865                  x[1], y[1], label, va="baseline", ha="right", size="xx-small", **kwargs
+  1866              )
+  1867          bar = self.mne.ax_main.plot(x, y, lw=4, **kwargs)[0]
+  1868          self.mne.scalebars[ch_type] = bar
+  1869          self.mne.scalebar_texts[ch_type] = text
+  1870  
+  1871      def _update_yaxis_labels(self):
+  1872          """Change the y-axis labels."""
+  1873          if self.mne.butterfly and self.mne.fig_selection is not None:
+  1874              exclude = ("Vertex", "Custom")
+  1875              ticklabels = list(self.mne.ch_selections)
+  1876              keep_mask = np.isin(ticklabels, exclude, invert=True)
+  1877              ticklabels = [
+  1878                  t.replace("Left-", "L-").replace("Right-", "R-") for t in ticklabels
+  1879              ]  # avoid having to rotate labels
+  1880              ticklabels = np.array(ticklabels)[keep_mask]
+  1881          elif self.mne.butterfly:
+  1882              _, ixs, _ = np.intersect1d(
+  1883                  _DATA_CH_TYPES_ORDER_DEFAULT, self.mne.ch_types, return_indices=True
+  1884              )
+  1885              ixs.sort()
+  1886              ticklabels = np.array(_DATA_CH_TYPES_ORDER_DEFAULT)[ixs]
+  1887          else:
+  1888              ticklabels = self.mne.ch_names[self.mne.picks]
+  1889          texts = self.mne.ax_main.set_yticklabels(ticklabels, picker=True)
+  1890          for text in texts:
+  1891              sty = (
+  1892                  "italic" if text.get_text() in self.mne.whitened_ch_names else "normal"
+  1893              )
+  1894              text.set_style(sty)
+  1895  
+  1896      def _xtick_formatter(self, x, pos=None, ax_type="main"):
+  1897          """Change the x-axis labels."""
+  1898          tickdiff = np.diff(self.mne.ax_main.get_xticks())[0]
+  1899          digits = np.ceil(-np.log10(tickdiff) + 1).astype(int)
+  1900          # always show millisecond precision for vline text
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 12, $0.05):
+```
+grep -n "boundary_times" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py |
+head -40
+```
+
+Tool:
+<returncode>
+0
+<output>
+410:                start = self.mne.boundary_times[ix]
+411:                width = np.diff(self.mne.boundary_times[:2])[0]
+423:                _ax.xaxis.set_major_locator(FixedLocator(self.mne.boundary_times[1:-1]))
+1757:            ix = np.searchsorted(self.mne.boundary_times[1:], time)
+1758:            time = self.mne.boundary_times[ix]
+1812:                        self.mne.times[0] + self.mne.boundary_times[1] / 2,
+1845:            label = f"{self.mne.boundary_times[1] / 2:.2f} s"
+2052:            epoch_ix = np.searchsorted(self.mne.boundary_times, time_range)
+2114:                    _starts = self.mne.boundary_times[epoch_ix][bool_ixs]
+2115:                    _stops = self.mne.boundary_times[epoch_ix + 1][bool_ixs]
+2211:        epoch_dur = np.diff(self.mne.boundary_times[:2])[0]
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 13, $0.06):
+```
+grep -n "first_time" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+496:            self.mne.first_time,
+497:            self.mne.first_time + self.mne.n_times / self.mne.info["sfreq"],
+692:            self.mne.t_start = np.clip(t_start, self.mne.first_time, t_max)
+828:                    xdata = event.xdata - self.mne.first_time
+1327:        onset = _sync_onset(self.mne.inst, vmin, True) - self.mne.first_time
+1364:        first_time = self.mne.first_time
+1367:        ann_idx = np.where(annotations.onset == onset - first_time)[0]
+1369:            onset = _sync_onset(raw, new_x, True) - first_time
+1373:            duration = _sync_onset(raw, new_x, True) - onset - first_time
+1752:            + self.mne.first_time
+1755:        time = np.clip(time, self.mne.first_time, max_time)
+1805:                x = (self.mne.times[0] + self.mne.first_time,) * 2
+1912:        first_time = datetime.timedelta(seconds=self.mne.inst.first_time)
+1914:        xdatetime = meas_date + first_time + xtime
+2032:            decim_value: self.mne.times[::decim_value] + self.mne.first_time
+2050:        time_range = (self.mne.times + self.mne.first_time)[[0, -1]]
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 14, $0.07):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py | sed -n '390,450p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   390          self.mne.zen_xlabel = ax_main.set_xlabel(xlabel)
+   391          self.mne.zen_xlabel.set_visible(not self.mne.scrollbars_visible)
+   392          # make sure background color of the axis is set
+   393          if "bgcolor" in kwargs:
+   394              ax_main.set_facecolor(kwargs["bgcolor"])
+   395  
+   396          # SCROLLBARS
+   397          ax_hscroll = div.append_axes(
+   398              position="bottom", size=Fixed(scroll_width), pad=Fixed(hscroll_dist)
+   399          )
+   400          ax_vscroll = div.append_axes(
+   401              position="right", size=Fixed(scroll_width), pad=Fixed(vscroll_dist)
+   402          )
+   403          ax_hscroll.get_yaxis().set_visible(False)
+   404          ax_hscroll.set_xlabel(xlabel)
+   405          ax_vscroll.set_axis_off()
+   406          # HORIZONTAL SCROLLBAR PATCHES (FOR MARKING BAD EPOCHS)
+   407          if self.mne.is_epochs:
+   408              epoch_nums = self.mne.inst.selection
+   409              for ix, _ in enumerate(epoch_nums):
+   410                  start = self.mne.boundary_times[ix]
+   411                  width = np.diff(self.mne.boundary_times[:2])[0]
+   412                  ax_hscroll.add_patch(
+   413                      Rectangle(
+   414                          (start, 0),
+   415                          width,
+   416                          1,
+   417                          color="none",
+   418                          zorder=self.mne.zorder["patch"],
+   419                      )
+   420                  )
+   421              # both axes, major ticks: gridlines
+   422              for _ax in (ax_main, ax_hscroll):
+   423                  _ax.xaxis.set_major_locator(FixedLocator(self.mne.boundary_times[1:-1]))
+   424                  _ax.xaxis.set_major_formatter(NullFormatter())
+   425              grid_kwargs = dict(
+   426                  color=self.mne.fgcolor, axis="x", zorder=self.mne.zorder["grid"]
+   427              )
+   428              ax_main.grid(linewidth=2, linestyle="dashed", **grid_kwargs)
+   429              ax_hscroll.grid(alpha=0.5, linewidth=0.5, linestyle="solid", **grid_kwargs)
+   430              # main axes, minor ticks: ticklabel (epoch number) for every epoch
+   431              ax_main.xaxis.set_minor_locator(FixedLocator(self.mne.midpoints))
+   432              ax_main.xaxis.set_minor_formatter(FixedFormatter(epoch_nums))
+   433              # hscroll axes, minor ticks: up to 20 ticklabels (epoch numbers)
+   434              ax_hscroll.xaxis.set_minor_locator(
+   435                  FixedLocator(self.mne.midpoints, nbins=20)
+   436              )
+   437              ax_hscroll.xaxis.set_minor_formatter(
+   438                  FuncFormatter(lambda x, pos: self._get_epoch_num_from_time(x))
+   439              )
+   440              # hide some ticks
+   441              ax_main.tick_params(axis="x", which="major", bottom=False)
+   442              ax_hscroll.tick_params(axis="x", which="both", bottom=False)
+   443          else:
+   444              # RAW / ICA X-AXIS TICK & LABEL FORMATTING
+   445              ax_main.xaxis.set_major_formatter(
+   446                  FuncFormatter(partial(self._xtick_formatter, ax_type="main"))
+   447              )
+   448              ax_hscroll.xaxis.set_major_formatter(
+   449                  FuncFormatter(partial(self._xtick_formatter, ax_type="hscroll"))
+   450              )
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 15, $0.08):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py | sed -n '490,500p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   490              1,
+   491              facecolor=hsel_facecolor,
+   492              **sel_kwargs,
+   493          )
+   494          ax_hscroll.add_patch(hsel_patch)
+   495          ax_hscroll.set_xlim(
+   496              self.mne.first_time,
+   497              self.mne.first_time + self.mne.n_times / self.mne.info["sfreq"],
+   498          )
+   499          # VLINE
+   500          vline_color = (0.0, 0.75, 0.0)
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 16, $0.09):
+```
+grep -n "_get_epoch_num_from_time" 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+438:                FuncFormatter(lambda x, pos: self._get_epoch_num_from_time(x))
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 17, $0.10):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+grep -n "def _get_epoch_num_from_time" 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py
+```
+
+Tool:
+<returncode>
+1
+<output>
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 18, $0.10):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+grep -n "from\|import" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py | 
+head -60
+```
+
+Tool:
+<returncode>
+0
+<output>
+38:import datetime
+39:import platform
+40:from collections import OrderedDict
+41:from contextlib import contextmanager
+42:from functools import partial
+44:import matplotlib.pyplot as plt
+45:import numpy as np
+46:from matplotlib import get_backend
+47:from matplotlib.figure import Figure
+49:from .._fiff.pick import (
+58:from ..fixes import _close_event
+59:from ..utils import Bunch, _click_ch_name, check_version, logger
+60:from ._figure import BrowserBase
+61:from .utils import (
+90:        from matplotlib import rcParams
+105:            from mne.viz._figure import BrowserParams
+115:        # remove references from parent fig to child fig
+346:        from matplotlib.colors import to_rgba_array
+347:        from matplotlib.patches import Rectangle
+348:        from matplotlib.ticker import (
+354:        from matplotlib.transforms import blended_transform_factory
+355:        from matplotlib.widgets import Button
+356:        from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+357:        from mpl_toolkits.axes_grid1.axes_size import Fixed
+438:                FuncFormatter(lambda x, pos: self._get_epoch_num_from_time(x))
+598:        from matplotlib.patheffects import Normal, Stroke
+709:            # add new chs from above if we're at the bottom of the scrollbar
+724:                # prevent from showing zero epochs, or more epochs than we have
+778:        from matplotlib.collections import PolyCollection
+780:        from ..annotations import _sync_onset
+858:        from matplotlib.text import Text
+1018:        from matplotlib.widgets import Button, CheckButtons, SpanSelector
+1019:        from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+1020:        from mpl_toolkits.axes_grid1.axes_size import Fixed
+1156:        from matplotlib.colors import to_rgba
+1157:        from matplotlib.widgets import CheckButtons, RadioButtons
+1325:        from ..annotations import _sync_onset
+1348:        """Remove annotation line from the plot and reactivate selector."""
+1357:        from ..annotations import _sync_onset
+1389:        """Clear all annotations from the figure."""
+1443:        from matplotlib.colors import to_rgb
+1444:        from matplotlib.widgets import RadioButtons
+1550:        # replicate plotting order from plot_sensors(), to get index right
+1569:        from matplotlib.widgets import Button, CheckButtons
+1713:        # grow/shrink main axes to take up space from (or make room for)
+1840:        from .utils import _simplify_float
+1993:        from matplotlib.colors import to_rgba_array
+1994:        from matplotlib.patches import Rectangle
+2163:        from matplotlib.collections import LineCollection
+2164:        from matplotlib.colors import to_rgba_array
+2216:        # recreate segs from scratch in case view duration changed
+2353:    from matplotlib import rc_context
+2377:    from matplotlib.axes import Axes
+2472:    from mne.io import BaseRaw
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 19, $0.11):
+```
+grep -n "_get_epoch_num_from_time" 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_figure.py 2>/dev/null || find 
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx -name "*.py" -exec grep -l 
+"_get_epoch_num_from_time" {} \;
+```
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+Tool:
+<returncode>
+0
+<output>
+/var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmp9_fr29yx/_mpl_figure.py
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+Limits exceeded. Limits: 0 steps, $0.1.
+Current spend: 19 steps, $0.11.
+New step limit: 
+=== STDERR ===

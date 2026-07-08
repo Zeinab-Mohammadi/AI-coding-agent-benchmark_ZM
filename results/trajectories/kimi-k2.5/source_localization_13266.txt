@@ -1,0 +1,1154 @@
+=== STDOUT ===
+👋 This is mini-swe-agent version 2.2.8.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/Users/user/Library/Application Support/mini-swe-agent/.env'
+Building agent config from specs: ['/Users/user/.cache/uv/archive-v0/6hx2hfchJbx19Eh448Ffk/lib/python3.11/site-packages/minisweagent/config/mini.yaml']
+
+System:
+You are a helpful assistant that can interact with a computer.
+
+User:
+Please solve this issue: Fix the bug in the file /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpy5u6_ub2/10_publication_figure.py.
+
+Context: This bug is in MNE-Python's source localization pipeline. Source localization maps scalp-level EEG/MEG signals back to brain regions. Errors in forward model computation, inverse operator application, or source morphing between 
+brain templates produce incorrect brain activation maps.
+
+The file is from the MNE-Python neuroscience library (PR #13266: FIX, DOC: Drop bad channel in 10_publication_figure.py).
+Read the file, identify the bug, and fix it in place. Only modify /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpy5u6_ub2/10_publication_figure.py. Do not install packages or run tests.
+
+You can execute bash commands and edit files to implement the necessary changes.
+
+## Recommended Workflow
+
+This workflow should be done step-by-step so that you can iterate on your changes and any possible problems.
+
+1. Analyze the codebase by finding and reading relevant files
+2. Create a script to reproduce the issue
+3. Edit the source code to resolve the issue
+4. Verify your fix works by running your script again
+5. Test edge cases to ensure your fix is robust
+6. Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+   Do not combine it with any other command. <important>After this command, you cannot continue working on this task.</important>
+
+## Command Execution Rules
+
+You are operating in an environment where
+
+1. You issue at least one command
+2. The system executes the command(s) in a subshell
+3. You see the result(s)
+4. You write your next command(s)
+
+Each response should include:
+
+1. **Reasoning text** where you explain your analysis and plan
+2. At least one tool call with your command
+
+**CRITICAL REQUIREMENTS:**
+
+- Your response SHOULD include reasoning text explaining what you're doing
+- Your response MUST include AT LEAST ONE bash tool call
+- Directory or environment variable changes are not persistent. Every action is executed in a new subshell.
+- However, you can prefix any action with `MY_ENV_VAR=MY_VALUE cd /path/to/working/dir && ...` or write/load environment variables from files
+- Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+  Do not combine it with any other command. <important>After this command, you cannot continue working on this task.</important>
+
+Example of a CORRECT response:
+<example_response>
+I need to understand the structure of the repository first. Let me check what files are in the current directory to get a better understanding of the codebase.
+
+[Makes bash tool call with {"command": "ls -la"} as arguments]
+</example_response>
+
+<system_information>
+Darwin 25.4.0 Darwin Kernel Version 25.4.0: Thu Mar 19 19:30:44 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6000 x86_64
+</system_information>
+
+## Useful command examples
+
+### Create a new file:
+
+```bash
+cat <<'EOF' > newfile.py
+import numpy as np
+hello = "world"
+print(hello)
+EOF
+```
+
+### Edit files with sed:<important>
+You are on MacOS. For all the below examples, you need to use `sed -i ''` instead of `sed -i`.
+</important>```bash
+# Replace all occurrences
+sed -i 's/old_string/new_string/g' filename.py
+
+# Replace only first occurrence
+sed -i 's/old_string/new_string/' filename.py
+
+# Replace first occurrence on line 1
+sed -i '1s/old_string/new_string/' filename.py
+
+# Replace all occurrences in lines 1-10
+sed -i '1,10s/old_string/new_string/g' filename.py
+```
+
+### View file content:
+
+```bash
+# View specific lines with numbers
+nl -ba filename.py | sed -n '10,20p'
+```
+
+### Any other command you want to run
+
+```bash
+anything
+```
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 1, $0.00):
+```
+cat /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpy5u6_ub2/10_publication_figure.py
+```
+
+Tool:
+<returncode>
+0
+<output_head>
+"""
+.. _tut-publication-figure:
+
+===================================
+Make figures more publication ready
+===================================
+
+In this example, we show several use cases to take MNE plots and
+customize them for a more publication-ready look.
+"""
+
+# Authors: Eric Larson <larson.eric.d@gmail.com>
+#          Daniel McCloy <dan.mccloy@gmail.com>
+#          Stefan Appelhoff <stefan.appelhoff@mailbox.org>
+#
+# License: BSD-3-Clause
+# Copyright the MNE-Python contributors.
+
+# %%
+# Imports
+# -------
+# We are importing everything we need for this example:
+
+import matplotlib.pyplot as plt
+import numpy as np
+from mpl_toolkits.axes_grid1 import ImageGrid, inset_locator, make_axes_locatable
+
+import mne
+
+# %%
+# Evoked plot with brain activation
+# ---------------------------------
+#
+# Suppose we want a figure with an evoked plot on top, and the brain activation
+# below, with the brain subplot slightly bigger than the evoked plot. Let's
+# start by loading some :ref:`example data <sample-dataset>`.
+
+data_path = mne.datasets.sample.data_path()
+subjects_dir = data_path / "subjects"
+fname_stc = data_path / "MEG" / "sample" / "sample_audvis-meg-eeg-lh.stc"
+fname_evoked = data_path / "MEG" / "sample" / "sample_audvis-ave.fif"
+
+evoked = mne.read_evokeds(fname_evoked, "Left Auditory")
+evoked.pick(picks="grad").apply_baseline((None, 0.0))
+max_t = evoked.get_peak()[1]
+
+stc = mne.read_source_estimate(fname_stc)
+
+# %%
+# During interactive plotting, we might see figures like this:
+
+evoked.plot()
+
+stc.plot(
+    views="lat",
+    hemi="split",
+    size=(800, 400),
+    subject="sample",
+    subjects_dir=subjects_dir,
+    initial_time=max_t,
+    time_viewer=False,
+    show_traces=False,
+)
+
+# %%
+# To make a publication-ready figure, first we'll re-plot the brain on a white
+# background, take a screenshot of it, and then crop out the white margins.
+# While we're at it, let's change the colormap, set custom colormap limits and
+# remove the default colorbar (so we can add a smaller, vertical one later):
+
+colormap = "viridis"
+clim = dict(kind="value", lims=[4, 8, 12])
+
+# Plot the STC, get the brain image, crop it:
+brain = stc.plot(
+    views="lat",
+    hemi="split",
+    size=(800, 400),
+    subject="sample",
+    subjects_dir=subjects_dir,
+    initial_time=max_t,
+    background="w",
+    colorbar=False,
+    clim=clim,
+    colormap=colormap,
+    time_viewer=False,
+    show_traces=False,
+)
+screenshot = brain.screenshot()
+brain.close()
+
+# %%
+# Now let's crop out the white margins and the white gap between hemispheres.
+# The screenshot has dimensions ``(h, w, 3)``, with the last axis being R, G, B
+# values for each pixel, encoded as integers between ``0`` and ``255``. ``(255,
+# 255, 255)`` encodes a white pixel, so we'll detect any pixels that differ
+# from that:
+
+nonwhite_pix = (screenshot != 255).any(-1)
+nonwhite_row = nonwhite_pix.any(1)
+nonwhite_col = nonwhite_pix.any(0)
+cropped_screenshot = screenshot[nonwhite_row][:, nonwhite_col]
+
+# before/after results
+fig = plt.figure(figsize=(4, 4))
+axes = ImageGrid(fig, 111, nrows_ncols=(2, 1), axes_pad=0.5)
+for ax, image, title in zip(
+    axes, [screenshot, cropped_screenshot], ["Before", "After"]
+):
+    ax.imshow(image)
+    ax.set_title(f"{title} cropping")
+
+# %%
+# A lot of figure settings can be adjusted after the figure is created, but
+# many can also be adjusted in advance by updating the
+# :data:`~matplotlib.rcParams` dictionary. This is especially useful when your
+# script generates several figures that you want to all have the same style:
+
+# Tweak the figure style
+plt.rcParams.update(
+    {
+        "ytick.labelsize": "small",
+        "xtick.labelsize": "small",
+        "axes.labelsize": "small",
+        "axes.titlesize": "medium",
+        "grid.color": "0.75",
+        "grid.linestyle": ":",
+    }
+)
+
+# %%
+# Now let's create our custom figure. There are lots of ways to do this step.
+# Here we'll create the figure and the subplot axes in one step, specifying
+# overall figure size, number and arrangement of subplots, and the ratio of
+# subplot heights for each row using :mod:`GridSpec keywords
+# <matplotlib.gridspec>`. Other approaches (using
+# :func:`~matplotlib.pyplot.subplot2grid`, or adding each axes manually) are
+# shown commented out, for reference.
+
+# sphinx_gallery_thumbnail_number = 4
+# figsize unit is inches
+fig, axes = plt.subplots(
+    nrows=2, ncols=1, figsize=(4.5, 3.0), gridspec_kw=dict(height_ratios=[3, 4])
+)
+
+# alternate way #1: using subplot2grid
+# fig = plt.figure(figsize=(4.5, 3.))
+# axes = [plt.subplot2grid((7, 1), (0, 0), rowspan=3),
+#         plt.subplot2grid((7, 1), (3, 0), rowspan=4)]
+
+# alternate way #2: using figure-relative coordinates
+# fig = plt.figure(figsize=(4.5, 3.))
+# axes = [fig.add_axes([0.125, 0.58, 0.775, 0.3]),  # left, bot., width, height
+#         fig.add_axes([0.125, 0.11, 0.775, 0.4])]
+
+# we'll put the evoked plot in the upper axes, and the brain below
+evoked_idx = 0
+brain_idx = 1
+
+# plot the evoked in the desired subplot, and add a line at peak
+<output_tail>
+me"],
+    frameon=True,
+    columnspacing=0.1,
+    labelspacing=0.1,
+    fontsize=8,
+    fancybox=True,
+    handlelength=1.8,
+)
+# remove the "N_ave" annotation
+for text in list(axes[evoked_idx].texts):
+    text.remove()
+# Remove spines and add grid
+axes[evoked_idx].grid(True)
+axes[evoked_idx].set_axisbelow(True)
+for key in ("top", "right"):
+    axes[evoked_idx].spines[key].set(visible=False)
+# Tweak the ticks and limits
+axes[evoked_idx].set(
+    yticks=np.arange(-200, 201, 100), xticks=np.arange(-0.2, 0.51, 0.1)
+)
+axes[evoked_idx].set(ylim=[-225, 225], xlim=[-0.2, 0.5])
+
+# now add the brain to the lower axes
+axes[brain_idx].imshow(cropped_screenshot)
+axes[brain_idx].axis("off")
+# add a vertical colorbar with the same properties as the 3D one
+divider = make_axes_locatable(axes[brain_idx])
+cax = divider.append_axes("right", size="5%", pad=0.2)
+cbar = mne.viz.plot_brain_colorbar(cax, clim, colormap, label="Activation (F)")
+
+# tweak margins and spacing
+fig.subplots_adjust(left=0.15, right=0.9, bottom=0.01, top=0.9, wspace=0.1, hspace=0.5)
+
+# add subplot labels
+for ax, label in zip(axes, "AB"):
+    ax.text(
+        0.03,
+        ax.get_position().ymax,
+        label,
+        transform=fig.transFigure,
+        fontsize=12,
+        fontweight="bold",
+        va="top",
+        ha="left",
+    )
+
+# %%
+# Custom timecourse with montage inset
+# ------------------------------------
+#
+# Suppose we want a figure with some mean timecourse extracted from a number of
+# sensors, and we want a smaller panel within the figure to show a head outline
+# with the positions of those sensors clearly marked.
+# If you are familiar with MNE, you know that this is something that
+# :func:`mne.viz.plot_compare_evokeds` does, see an example output in
+# :ref:`ex-hf-sef-data` at the bottom.
+#
+# In this part of the example, we will show you how to achieve this result on
+# your own figure, without having to use :func:`mne.viz.plot_compare_evokeds`!
+#
+# Let's start by loading some :ref:`example data <sample-dataset>`.
+
+data_path = mne.datasets.sample.data_path()
+fname_raw = data_path / "MEG" / "sample" / "sample_audvis_raw.fif"
+raw = mne.io.read_raw_fif(fname_raw)
+
+# For the sake of the example, we focus on EEG data
+raw.pick(picks="eeg")
+
+
+# %%
+# Let's make a plot.
+
+# channels to plot:
+to_plot = [f"EEG {i:03}" for i in range(1, 5)]
+
+# get the data for plotting in a short time interval from 10 to 20 seconds
+start = int(raw.info["sfreq"] * 10)
+stop = int(raw.info["sfreq"] * 20)
+data, times = raw.get_data(picks=to_plot, start=start, stop=stop, return_times=True)
+
+# Scale the data from the MNE internal unit V to µV
+data *= 1e6
+# Take the mean of the channels
+mean = np.mean(data, axis=0)
+# make a figure
+fig, ax = plt.subplots(figsize=(4.5, 3))
+# plot some EEG data
+ax.plot(times, mean)
+
+# %%
+# So far so good. Now let's add the smaller figure within the figure to show
+# exactly, which sensors we used to make the timecourse.
+# For that, we use an "inset_axes" that we plot into our existing axes.
+# The head outline with the sensor positions can be plotted using the
+# `~mne.io.Raw` object that is the source of our data.
+# Specifically, that object already contains all the sensor positions,
+# and we can plot them using the ``plot_sensors`` method.
+
+# recreate the figure (only necessary for our documentation server)
+fig, ax = plt.subplots(figsize=(4.5, 3))
+ax.plot(times, mean)
+axins = inset_locator.inset_axes(ax, width="30%", height="30%", loc=2)
+
+# pick() edits the raw object in place, so we'll make a copy here
+# so that our raw object stays intact for potential later analysis
+raw.copy().pick(to_plot).plot_sensors(title="", axes=axins)
+
+# %%
+# That looks nice. But the sensor dots are way too big for our taste. Luckily,
+# all MNE-Python plots use Matplotlib under the hood and we can customize
+# each and every facet of them.
+# To make the sensor dots smaller, we need to first get a handle on them to
+# then apply a ``*.set_*`` method on them.
+
+# If we inspect our axes we find the objects contained in our plot:
+print(axins.get_children())
+
+# %%
+# That's quite a a lot of objects, but we know that we want to change the
+# sensor dots, and those are most certainly a "PathCollection" object.
+# So let's have a look at how many "collections" we have in the axes.
+print(axins.collections)
+
+# %%
+# There is only one! Those must be the sensor dots we were looking for.
+# We finally found exactly what we needed. Sometimes this can take a bit of
+# experimentation.
+
+sensor_dots = axins.collections[0]
+
+# Recreate the figure once more; shrink the sensor dots; add axis labels
+fig, ax = plt.subplots(figsize=(4.5, 3))
+ax.plot(times, mean)
+axins = inset_locator.inset_axes(ax, width="30%", height="30%", loc=2)
+raw.copy().pick(to_plot).plot_sensors(title="", axes=axins)
+sensor_dots = axins.collections[0]
+sensor_dots.set_sizes([1])
+# add axis labels, and adjust bottom figure margin to make room for them
+ax.set(xlabel="Time (s)", ylabel="Amplitude (µV)")
+fig.subplots_adjust(bottom=0.2)
+
+<elided_chars>
+227
+<warning>
+Output too long.
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 2, $0.00):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpy5u6_ub2/10_publication_figure.py
+```
+
+Tool:
+<returncode>
+0
+<output_head>
+     1  """
+     2  .. _tut-publication-figure:
+     3  
+     4  ===================================
+     5  Make figures more publication ready
+     6  ===================================
+     7  
+     8  In this example, we show several use cases to take MNE plots and
+     9  customize them for a more publication-ready look.
+    10  """
+    11  
+    12  # Authors: Eric Larson <larson.eric.d@gmail.com>
+    13  #          Daniel McCloy <dan.mccloy@gmail.com>
+    14  #          Stefan Appelhoff <stefan.appelhoff@mailbox.org>
+    15  #
+    16  # License: BSD-3-Clause
+    17  # Copyright the MNE-Python contributors.
+    18  
+    19  # %%
+    20  # Imports
+    21  # -------
+    22  # We are importing everything we need for this example:
+    23  
+    24  import matplotlib.pyplot as plt
+    25  import numpy as np
+    26  from mpl_toolkits.axes_grid1 import ImageGrid, inset_locator, make_axes_locatable
+    27  
+    28  import mne
+    29  
+    30  # %%
+    31  # Evoked plot with brain activation
+    32  # ---------------------------------
+    33  #
+    34  # Suppose we want a figure with an evoked plot on top, and the brain activation
+    35  # below, with the brain subplot slightly bigger than the evoked plot. Let's
+    36  # start by loading some :ref:`example data <sample-dataset>`.
+    37  
+    38  data_path = mne.datasets.sample.data_path()
+    39  subjects_dir = data_path / "subjects"
+    40  fname_stc = data_path / "MEG" / "sample" / "sample_audvis-meg-eeg-lh.stc"
+    41  fname_evoked = data_path / "MEG" / "sample" / "sample_audvis-ave.fif"
+    42  
+    43  evoked = mne.read_evokeds(fname_evoked, "Left Auditory")
+    44  evoked.pick(picks="grad").apply_baseline((None, 0.0))
+    45  max_t = evoked.get_peak()[1]
+    46  
+    47  stc = mne.read_source_estimate(fname_stc)
+    48  
+    49  # %%
+    50  # During interactive plotting, we might see figures like this:
+    51  
+    52  evoked.plot()
+    53  
+    54  stc.plot(
+    55      views="lat",
+    56      hemi="split",
+    57      size=(800, 400),
+    58      subject="sample",
+    59      subjects_dir=subjects_dir,
+    60      initial_time=max_t,
+    61      time_viewer=False,
+    62      show_traces=False,
+    63  )
+    64  
+    65  # %%
+    66  # To make a publication-ready figure, first we'll re-plot the brain on a white
+    67  # background, take a screenshot of it, and then crop out the white margins.
+    68  # While we're at it, let's change the colormap, set custom colormap limits and
+    69  # remove the default colorbar (so we can add a smaller, vertical one later):
+    70  
+    71  colormap = "viridis"
+    72  clim = dict(kind="value", lims=[4, 8, 12])
+    73  
+    74  # Plot the STC, get the brain image, crop it:
+    75  brain = stc.plot(
+    76      views="lat",
+    77      hemi="split",
+    78      size=(800, 400),
+    79      subject="sample",
+    80      subjects_dir=subjects_dir,
+    81      initial_time=max_t,
+    82      background="w",
+    83      colorbar=False,
+    84      clim=clim,
+    85      colormap=colormap,
+    86      time_viewer=False,
+    87      show_traces=False,
+    88  )
+    89  screenshot = brain.screenshot()
+    90  brain.close()
+    91  
+    92  # %%
+    93  # Now let's crop out the white margins and the white gap between hemispheres.
+    94  # The screenshot has dimensions ``(h, w, 3)``, with the last axis being R, G, B
+    95  # values for each pixel, encoded as integers between ``0`` and ``255``. ``(255,
+    96  # 255, 255)`` encodes a white pixel, so we'll detect any pixels that differ
+    97  # from that:
+    98  
+    99  nonwhite_pix = (screenshot != 255).any(-1)
+   100  nonwhite_row = nonwhite_pix.any(1)
+   101  nonwhite_col = nonwhite_pix.any(0)
+   102  cropped_screenshot = screenshot[nonwhite_row][:, nonwhite_col]
+   103  
+   104  # before/after results
+   105  fig = plt.figure(figsize=(4, 4))
+   106  axes = ImageGrid(fig, 111, nrows_ncols=(2, 1), axes_pad=0.5)
+   107  for ax, image, title in zip(
+   108      axes, [screenshot, cropped_screenshot], ["Before", "After"]
+   109  ):
+   110      ax.imshow(image)
+   111      ax.set_title(f"{title} cropping")
+   112  
+   113  # %%
+   114  # A lot of figure settings can be adjusted after the figure is created, but
+   115  # many can also be adjusted in advance by updating the
+   116  # :data:`~matplotlib.rcParams` dictionary. This is especially useful when your
+   117  # script generates several figures that you want to all have the same style:
+   118  
+   119  # Tweak the figure style
+   120  plt.rcParams.update(
+   121      {
+   122          "ytick.labelsize": "small",
+   123          "xtick.labelsize": "small",
+   124          "axes.labelsize": "small",
+   125          "axes.titlesize": "medium",
+   126          "grid.color": "0.75",
+   127          "grid.linestyle": ":",
+   128      }
+   129  )
+   130  
+   131  # %%
+   132  # Now let's create our custom figure. There are lots of ways to do this step.
+   133  # Here we'll create the figure and the subplot axes in one step, specifying
+   134  # overall figure size, number and arrangement of subplots, and the ratio of
+   135  # subplot heights for each r
+<output_tail>
+
+   193  cax = divider.append_axes("right", size="5%", pad=0.2)
+   194  cbar = mne.viz.plot_brain_colorbar(cax, clim, colormap, label="Activation (F)")
+   195  
+   196  # tweak margins and spacing
+   197  fig.subplots_adjust(left=0.15, right=0.9, bottom=0.01, top=0.9, wspace=0.1, hspace=0.5)
+   198  
+   199  # add subplot labels
+   200  for ax, label in zip(axes, "AB"):
+   201      ax.text(
+   202          0.03,
+   203          ax.get_position().ymax,
+   204          label,
+   205          transform=fig.transFigure,
+   206          fontsize=12,
+   207          fontweight="bold",
+   208          va="top",
+   209          ha="left",
+   210      )
+   211  
+   212  # %%
+   213  # Custom timecourse with montage inset
+   214  # ------------------------------------
+   215  #
+   216  # Suppose we want a figure with some mean timecourse extracted from a number of
+   217  # sensors, and we want a smaller panel within the figure to show a head outline
+   218  # with the positions of those sensors clearly marked.
+   219  # If you are familiar with MNE, you know that this is something that
+   220  # :func:`mne.viz.plot_compare_evokeds` does, see an example output in
+   221  # :ref:`ex-hf-sef-data` at the bottom.
+   222  #
+   223  # In this part of the example, we will show you how to achieve this result on
+   224  # your own figure, without having to use :func:`mne.viz.plot_compare_evokeds`!
+   225  #
+   226  # Let's start by loading some :ref:`example data <sample-dataset>`.
+   227  
+   228  data_path = mne.datasets.sample.data_path()
+   229  fname_raw = data_path / "MEG" / "sample" / "sample_audvis_raw.fif"
+   230  raw = mne.io.read_raw_fif(fname_raw)
+   231  
+   232  # For the sake of the example, we focus on EEG data
+   233  raw.pick(picks="eeg")
+   234  
+   235  
+   236  # %%
+   237  # Let's make a plot.
+   238  
+   239  # channels to plot:
+   240  to_plot = [f"EEG {i:03}" for i in range(1, 5)]
+   241  
+   242  # get the data for plotting in a short time interval from 10 to 20 seconds
+   243  start = int(raw.info["sfreq"] * 10)
+   244  stop = int(raw.info["sfreq"] * 20)
+   245  data, times = raw.get_data(picks=to_plot, start=start, stop=stop, return_times=True)
+   246  
+   247  # Scale the data from the MNE internal unit V to µV
+   248  data *= 1e6
+   249  # Take the mean of the channels
+   250  mean = np.mean(data, axis=0)
+   251  # make a figure
+   252  fig, ax = plt.subplots(figsize=(4.5, 3))
+   253  # plot some EEG data
+   254  ax.plot(times, mean)
+   255  
+   256  # %%
+   257  # So far so good. Now let's add the smaller figure within the figure to show
+   258  # exactly, which sensors we used to make the timecourse.
+   259  # For that, we use an "inset_axes" that we plot into our existing axes.
+   260  # The head outline with the sensor positions can be plotted using the
+   261  # `~mne.io.Raw` object that is the source of our data.
+   262  # Specifically, that object already contains all the sensor positions,
+   263  # and we can plot them using the ``plot_sensors`` method.
+   264  
+   265  # recreate the figure (only necessary for our documentation server)
+   266  fig, ax = plt.subplots(figsize=(4.5, 3))
+   267  ax.plot(times, mean)
+   268  axins = inset_locator.inset_axes(ax, width="30%", height="30%", loc=2)
+   269  
+   270  # pick() edits the raw object in place, so we'll make a copy here
+   271  # so that our raw object stays intact for potential later analysis
+   272  raw.copy().pick(to_plot).plot_sensors(title="", axes=axins)
+   273  
+   274  # %%
+   275  # That looks nice. But the sensor dots are way too big for our taste. Luckily,
+   276  # all MNE-Python plots use Matplotlib under the hood and we can customize
+   277  # each and every facet of them.
+   278  # To make the sensor dots smaller, we need to first get a handle on them to
+   279  # then apply a ``*.set_*`` method on them.
+   280  
+   281  # If we inspect our axes we find the objects contained in our plot:
+   282  print(axins.get_children())
+   283  
+   284  # %%
+   285  # That's quite a a lot of objects, but we know that we want to change the
+   286  # sensor dots, and those are most certainly a "PathCollection" object.
+   287  # So let's have a look at how many "collections" we have in the axes.
+   288  print(axins.collections)
+   289  
+   290  # %%
+   291  # There is only one! Those must be the sensor dots we were looking for.
+   292  # We finally found exactly what we needed. Sometimes this can take a bit of
+   293  # experimentation.
+   294  
+   295  sensor_dots = axins.collections[0]
+   296  
+   297  # Recreate the figure once more; shrink the sensor dots; add axis labels
+   298  fig, ax = plt.subplots(figsize=(4.5, 3))
+   299  ax.plot(times, mean)
+   300  axins = inset_locator.inset_axes(ax, width="30%", height="30%", loc=2)
+   301  raw.copy().pick(to_plot).plot_sensors(title="", axes=axins)
+   302  sensor_dots = axins.collections[0]
+   303  sensor_dots.set_sizes([1])
+   304  # add axis labels, and adjust bottom figure margin to make room for them
+   305  ax.set(xlabel="Time (s)", ylabel="Amplitude (µV)")
+   306  fig.subplots_adjust(bottom=0.2)
+
+<elided_chars>
+2369
+<warning>
+Output too long.
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 3, $0.01):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+ Let me look at the full file to understand all the usage patterns:
+
+```
+cat /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpy5u6_ub2/10_publication_figure.py | head -n 250
+```
+
+Tool:
+<returncode>
+0
+<output>
+"""
+.. _tut-publication-figure:
+
+===================================
+Make figures more publication ready
+===================================
+
+In this example, we show several use cases to take MNE plots and
+customize them for a more publication-ready look.
+"""
+
+# Authors: Eric Larson <larson.eric.d@gmail.com>
+#          Daniel McCloy <dan.mccloy@gmail.com>
+#          Stefan Appelhoff <stefan.appelhoff@mailbox.org>
+#
+# License: BSD-3-Clause
+# Copyright the MNE-Python contributors.
+
+# %%
+# Imports
+# -------
+# We are importing everything we need for this example:
+
+import matplotlib.pyplot as plt
+import numpy as np
+from mpl_toolkits.axes_grid1 import ImageGrid, inset_locator, make_axes_locatable
+
+import mne
+
+# %%
+# Evoked plot with brain activation
+# ---------------------------------
+#
+# Suppose we want a figure with an evoked plot on top, and the brain activation
+# below, with the brain subplot slightly bigger than the evoked plot. Let's
+# start by loading some :ref:`example data <sample-dataset>`.
+
+data_path = mne.datasets.sample.data_path()
+subjects_dir = data_path / "subjects"
+fname_stc = data_path / "MEG" / "sample" / "sample_audvis-meg-eeg-lh.stc"
+fname_evoked = data_path / "MEG" / "sample" / "sample_audvis-ave.fif"
+
+evoked = mne.read_evokeds(fname_evoked, "Left Auditory")
+evoked.pick(picks="grad").apply_baseline((None, 0.0))
+max_t = evoked.get_peak()[1]
+
+stc = mne.read_source_estimate(fname_stc)
+
+# %%
+# During interactive plotting, we might see figures like this:
+
+evoked.plot()
+
+stc.plot(
+    views="lat",
+    hemi="split",
+    size=(800, 400),
+    subject="sample",
+    subjects_dir=subjects_dir,
+    initial_time=max_t,
+    time_viewer=False,
+    show_traces=False,
+)
+
+# %%
+# To make a publication-ready figure, first we'll re-plot the brain on a white
+# background, take a screenshot of it, and then crop out the white margins.
+# While we're at it, let's change the colormap, set custom colormap limits and
+# remove the default colorbar (so we can add a smaller, vertical one later):
+
+colormap = "viridis"
+clim = dict(kind="value", lims=[4, 8, 12])
+
+# Plot the STC, get the brain image, crop it:
+brain = stc.plot(
+    views="lat",
+    hemi="split",
+    size=(800, 400),
+    subject="sample",
+    subjects_dir=subjects_dir,
+    initial_time=max_t,
+    background="w",
+    colorbar=False,
+    clim=clim,
+    colormap=colormap,
+    time_viewer=False,
+    show_traces=False,
+)
+screenshot = brain.screenshot()
+brain.close()
+
+# %%
+# Now let's crop out the white margins and the white gap between hemispheres.
+# The screenshot has dimensions ``(h, w, 3)``, with the last axis being R, G, B
+# values for each pixel, encoded as integers between ``0`` and ``255``. ``(255,
+# 255, 255)`` encodes a white pixel, so we'll detect any pixels that differ
+# from that:
+
+nonwhite_pix = (screenshot != 255).any(-1)
+nonwhite_row = nonwhite_pix.any(1)
+nonwhite_col = nonwhite_pix.any(0)
+cropped_screenshot = screenshot[nonwhite_row][:, nonwhite_col]
+
+# before/after results
+fig = plt.figure(figsize=(4, 4))
+axes = ImageGrid(fig, 111, nrows_ncols=(2, 1), axes_pad=0.5)
+for ax, image, title in zip(
+    axes, [screenshot, cropped_screenshot], ["Before", "After"]
+):
+    ax.imshow(image)
+    ax.set_title(f"{title} cropping")
+
+# %%
+# A lot of figure settings can be adjusted after the figure is created, but
+# many can also be adjusted in advance by updating the
+# :data:`~matplotlib.rcParams` dictionary. This is especially useful when your
+# script generates several figures that you want to all have the same style:
+
+# Tweak the figure style
+plt.rcParams.update(
+    {
+        "ytick.labelsize": "small",
+        "xtick.labelsize": "small",
+        "axes.labelsize": "small",
+        "axes.titlesize": "medium",
+        "grid.color": "0.75",
+        "grid.linestyle": ":",
+    }
+)
+
+# %%
+# Now let's create our custom figure. There are lots of ways to do this step.
+# Here we'll create the figure and the subplot axes in one step, specifying
+# overall figure size, number and arrangement of subplots, and the ratio of
+# subplot heights for each row using :mod:`GridSpec keywords
+# <matplotlib.gridspec>`. Other approaches (using
+# :func:`~matplotlib.pyplot.subplot2grid`, or adding each axes manually) are
+# shown commented out, for reference.
+
+# sphinx_gallery_thumbnail_number = 4
+# figsize unit is inches
+fig, axes = plt.subplots(
+    nrows=2, ncols=1, figsize=(4.5, 3.0), gridspec_kw=dict(height_ratios=[3, 4])
+)
+
+# alternate way #1: using subplot2grid
+# fig = plt.figure(figsize=(4.5, 3.))
+# axes = [plt.subplot2grid((7, 1), (0, 0), rowspan=3),
+#         plt.subplot2grid((7, 1), (3, 0), rowspan=4)]
+
+# alternate way #2: using figure-relative coordinates
+# fig = plt.figure(figsize=(4.5, 3.))
+# axes = [fig.add_axes([0.125, 0.58, 0.775, 0.3]),  # left, bot., width, height
+#         fig.add_axes([0.125, 0.11, 0.775, 0.4])]
+
+# we'll put the evoked plot in the upper axes, and the brain below
+evoked_idx = 0
+brain_idx = 1
+
+# plot the evoked in the desired subplot, and add a line at peak activation
+evoked.plot(axes=axes[evoked_idx])
+peak_line = axes[evoked_idx].axvline(max_t, color="#66CCEE", ls="--")
+# custom legend
+axes[evoked_idx].legend(
+    [axes[evoked_idx].lines[0], peak_line],
+    ["MEG data", "Peak time"],
+    frameon=True,
+    columnspacing=0.1,
+    labelspacing=0.1,
+    fontsize=8,
+    fancybox=True,
+    handlelength=1.8,
+)
+# remove the "N_ave" annotation
+for text in list(axes[evoked_idx].texts):
+    text.remove()
+# Remove spines and add grid
+axes[evoked_idx].grid(True)
+axes[evoked_idx].set_axisbelow(True)
+for key in ("top", "right"):
+    axes[evoked_idx].spines[key].set(visible=False)
+# Tweak the ticks and limits
+axes[evoked_idx].set(
+    yticks=np.arange(-200, 201, 100), xticks=np.arange(-0.2, 0.51, 0.1)
+)
+axes[evoked_idx].set(ylim=[-225, 225], xlim=[-0.2, 0.5])
+
+# now add the brain to the lower axes
+axes[brain_idx].imshow(cropped_screenshot)
+axes[brain_idx].axis("off")
+# add a vertical colorbar with the same properties as the 3D one
+divider = make_axes_locatable(axes[brain_idx])
+cax = divider.append_axes("right", size="5%", pad=0.2)
+cbar = mne.viz.plot_brain_colorbar(cax, clim, colormap, label="Activation (F)")
+
+# tweak margins and spacing
+fig.subplots_adjust(left=0.15, right=0.9, bottom=0.01, top=0.9, wspace=0.1, hspace=0.5)
+
+# add subplot labels
+for ax, label in zip(axes, "AB"):
+    ax.text(
+        0.03,
+        ax.get_position().ymax,
+        label,
+        transform=fig.transFigure,
+        fontsize=12,
+        fontweight="bold",
+        va="top",
+        ha="left",
+    )
+
+# %%
+# Custom timecourse with montage inset
+# ------------------------------------
+#
+# Suppose we want a figure with some mean timecourse extracted from a number of
+# sensors, and we want a smaller panel within the figure to show a head outline
+# with the positions of those sensors clearly marked.
+# If you are familiar with MNE, you know that this is something that
+# :func:`mne.viz.plot_compare_evokeds` does, see an example output in
+# :ref:`ex-hf-sef-data` at the bottom.
+#
+# In this part of the example, we will show you how to achieve this result on
+# your own figure, without having to use :func:`mne.viz.plot_compare_evokeds`!
+#
+# Let's start by loading some :ref:`example data <sample-dataset>`.
+
+data_path = mne.datasets.sample.data_path()
+fname_raw = data_path / "MEG" / "sample" / "sample_audvis_raw.fif"
+raw = mne.io.read_raw_fif(fname_raw)
+
+# For the sake of the example, we focus on EEG data
+raw.pick(picks="eeg")
+
+
+# %%
+# Let's make a plot.
+
+# channels to plot:
+to_plot = [f"EEG {i:03}" for i in range(1, 5)]
+
+# get the data for plotting in a short time interval from 10 to 20 seconds
+start = int(raw.info["sfreq"] * 10)
+stop = int(raw.info["sfreq"] * 20)
+data, times = raw.get_data(picks=to_plot, start=start, stop=stop, return_times=True)
+
+# Scale the data from the MNE internal unit V to µV
+data *= 1e6
+# Take the mean of the channels
+mean = np.mean(data, axis=0)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 4, $0.02):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+grep -n "pick" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpy5u6_ub2/10_publication_figure.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+44:evoked.pick(picks="grad").apply_baseline((None, 0.0))
+233:raw.pick(picks="eeg")
+245:data, times = raw.get_data(picks=to_plot, start=start, stop=stop, return_times=True)
+270:# pick() edits the raw object in place, so we'll make a copy here
+272:raw.copy().pick(to_plot).plot_sensors(title="", axes=axins)
+301:raw.copy().pick(to_plot).plot_sensors(title="", axes=axins)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 5, $0.03):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+ Now I understand the issue. Looking at line 233, when `raw.pick(picks="eeg")` is called, it doesn't exclude bad channels. In MNE-Python, if there are bad channels in the data, this can cause issues because bad channels are included by 
+default in `pick()`. The PR description mentions "Drop bad channel in 10_publication_figure.py", which indicates we need to exclude bad channels when picking EEG data.
+
+Let me fix this by adding the `exclude="bads"` parameter to the `pick()` call:
+
+```
+sed -i '' 's/raw.pick(picks="eeg")/raw.pick(picks="eeg", exclude="bads")/' /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpy5u6_ub2/10_publication_figure.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 6, $0.03):
+```
+nl -ba /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpy5u6_ub2/10_publication_figure.py | sed -n '230,240p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+   230  raw = mne.io.read_raw_fif(fname_raw)
+   231  
+   232  # For the sake of the example, we focus on EEG data
+   233  raw.pick(picks="eeg", exclude="bads")
+   234  
+   235  
+   236  # %%
+   237  # Let's make a plot.
+   238  
+   239  # channels to plot:
+   240  to_plot = [f"EEG {i:03}" for i in range(1, 5)]
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 7, $0.04):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+```
+grep -n "pick" /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpy5u6_ub2/10_publication_figure.py
+```
+
+Tool:
+<returncode>
+0
+<output>
+44:evoked.pick(picks="grad").apply_baseline((None, 0.0))
+233:raw.pick(picks="eeg", exclude="bads")
+245:data, times = raw.get_data(picks=to_plot, start=start, stop=stop, return_times=True)
+270:# pick() edits the raw object in place, so we'll make a copy here
+272:raw.copy().pick(to_plot).plot_sensors(title="", axes=axins)
+301:raw.copy().pick(to_plot).plot_sensors(title="", axes=axins)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 8, $0.05):
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+ The fix has been successfully applied. Let me verify the change is correct:
+
+```
+cat /var/folders/ds/ptgs391j5r77g4x8rmgcj4mh0000gp/T/tmpy5u6_ub2/10_publication_figure.py | sed -n '228,235p'
+```
+
+Tool:
+<returncode>
+0
+<output>
+data_path = mne.datasets.sample.data_path()
+fname_raw = data_path / "MEG" / "sample" / "sample_audvis_raw.fif"
+raw = mne.io.read_raw_fif(fname_raw)
+
+# For the sake of the example, we focus on EEG data
+raw.pick(picks="eeg", exclude="bads")
+
+
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+[1;31mProvider List: https://docs.litellm.ai/docs/providers[0m
+
+
+mini-swe-agent (step 9, $0.05):
+ The fix has been successfully applied. The bug was that when picking EEG channels from the raw data, bad channels were not being excluded. I've added the `exclude="bads"` parameter to the `raw.pick()` call on line 233.
+
+This change ensures that bad channels (marked as bad in the recording) are dropped when selecting EEG channels, which is important for accurate source localization and data analysis in MNE-Python's pipeline.
+
+```
+echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+```
+Agent wants to finish. Type new task or Enter to quit (/h for commands)
+>  
+
+
+
+
+
+
+ 
+=== STDERR ===
