@@ -104,7 +104,7 @@ export OPENROUTER_API_KEY="..."
 python3 scripts/generate_tasks.py
 
 # build the sandbox
-docker build -t mne-benchmark docker/
+docker build -t silent-bug-bench docker/
 
 # evaluate a model with the agentic runner
 python3 scripts/run_miniswe.py \
